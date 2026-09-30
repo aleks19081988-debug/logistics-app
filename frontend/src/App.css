@@ -1,38 +1,155 @@
-.App {
+/* Базовые стили приложения */
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: #f8fafc;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.header h1 {
+  font-size: 20px;
+  margin: 0 0 16px 0;
+  color: #0f172a;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.loader {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  align-items: center;
+  min-height: 100vh;
+  font-size: 18px;
+  font-weight: 600;
+  color: #475569;
 }
 
-.App-link {
-  color: #61dafb;
+/* Выбор автомобилей */
+.vehicle-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.btn-vehicle {
+  flex: 1 1 calc(50% - 8px);
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-vehicle.active {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+/* Карточки точек доставки */
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.card h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.card p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.btn-map {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: #f1f5f9;
+  color: #2563eb;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* ---------------------------------------------------- */
+/* ШАГ 2: СТИЛИ ДЛЯ ПОИСКА ПО ДОКУМЕНТУ                 */
+/* ---------------------------------------------------- */
+
+.btn-search-tab {
+  flex: 1 1 100%;
+  background-color: #f1f5f9;
+  border: 2px dashed #94a3b8;
+  color: #334155;
+}
+
+.btn-search-tab.active {
+  background-color: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.search-section {
+  margin-top: 15px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  border: 2px solid #cbd5e1;
+  border-radius: 10px;
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 15px;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: #0284c7;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.badge-vehicle {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.doc-num {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.no-results {
+  text-align: center;
+  color: #64748b;
+  margin-top: 20px;
+  font-size: 15px;
 }

@@ -1,198 +1,154 @@
 import React, { useState, useEffect } from 'react';
+import './App.css';
 
 const API_URL = 'https://logistics-backend-3vj1.onrender.com';
 
 function App() {
   const [routes, setRoutes] = useState({});
-  const [selectedVehicle, setSelectedVehicle] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetch(`${API_URL}/api/routes-by-vehicle`)
       .then((res) => res.json())
       .then((data) => {
-        setRoutes(data || {});
+        setRoutes(data);
         setLoading(false);
       })
       .catch((err) => {
-        console.error('Ошибка загрузки данных:', err);
+        console.error('Ошибка загрузки:', err);
         setLoading(false);
       });
   }, []);
 
-  const openInGoogleMaps = (point) => {
-    const city = point['Факт.Місто доставки'] || '';
-    const street = point['Вулиця'] || '';
-    const house = point['№ Будинку'] || '';
-
-    const addressParts = [city, street, house].filter(Boolean);
-    const fullAddress = addressParts.join(', ');
-
-    if (!fullAddress.trim()) {
-      alert('Адрес не найден в точке доставки');
-      return;
-    }
-
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
-    window.open(url, '_blank');
-  };
-
   if (loading) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'sans-serif' }}>
-        <h2>⏳ Загрузка маршрутов...</h2>
-      </div>
-    );
+    return <div className="loader">Загрузка маршрутов...</div>;
   }
 
-  const vehicleList = Object.keys(routes);
+  const vehicles = Object.keys(routes);
+
+  // Сбор всех точек для глобального поиска по документу
+  const allPoints = [];
+  Object.entries(routes).forEach(([vehicle, points]) => {
+    points.forEach((point) => {
+      allPoints.push({ ...point, vehicle });
+    });
+  });
+
+  // Фильтрация по номеру документа / клиенту / адресу
+  const filteredPoints = searchQuery.trim() === '' 
+    ? [] 
+    : allPoints.filter((p) => {
+        const query = searchQuery.toLowerCase();
+        const doc = String(p.document || p.doc || '').toLowerCase();
+        const client = String(p.client || '').toLowerCase();
+        const address = String(p.address || '').toLowerCase();
+        return doc.includes(query) || client.includes(query) || address.includes(query);
+      });
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '16px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f8', minHeight: '100vh' }}>
-      <header style={{ backgroundColor: '#1e293b', color: '#fff', padding: '16px', borderRadius: '12px', marginBottom: '20px', textAlign: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '20px' }}>🚚 Логистика: Экран водителя</h1>
+    <div className="container">
+      <header className="header">
+        <h1>🚚 Маршруты доставки</h1>
       </header>
 
-      {!selectedVehicle ? (
-        <div>
-          <h3 style={{ color: '#334155' }}>Выберите ваш автомобиль:</h3>
-          {vehicleList.length === 0 ? (
-            <p>Маршруты не найдены в Google Таблице.</p>
-          ) : (
-            <div style={{ display: 'grid', gap: '12px' }}>
-              {vehicleList.map((vehicle) => (
-                <button
-                  key={vehicle}
-                  onClick={() => setSelectedVehicle(vehicle)}
-                  style={{
-                    padding: '16px',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    backgroundColor: '#0284c7',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span>🚗 {vehicle}</span>
-                  <span style={{ fontSize: '14px', backgroundColor: '#0369a1', padding: '4px 8px', borderRadius: '6px' }}>
-                    Точек: {routes[vehicle].length}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div>
+      {/* Список кнопок автомобилей + кнопка поиска в конце */}
+      <div className="vehicle-selector">
+        {vehicles.map((v) => (
           <button
-            onClick={() => setSelectedVehicle('')}
-            style={{
-              padding: '8px 14px',
-              backgroundColor: '#64748b',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              marginBottom: '16px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
+            key={v}
+            className={`btn-vehicle ${selectedVehicle === v ? 'active' : ''}`}
+            onClick={() => {
+              setSelectedVehicle(v);
+              setSearchQuery('');
             }}
           >
-            ← Сменить авто
+            🚗 {v}
           </button>
+        ))}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={{ color: '#0f172a', margin: 0 }}>Маршрут: {selectedVehicle}</h2>
-            {routes[selectedVehicle]?.[0]?.['Водій'] && (
-              <span style={{ color: '#475569', fontSize: '14px', fontWeight: 'bold' }}>
-                👤 {routes[selectedVehicle][0]['Водій']}
-              </span>
+        <button
+          className={`btn-vehicle btn-search-tab ${selectedVehicle === 'SEARCH' ? 'active' : ''}`}
+          onClick={() => {
+            setSelectedVehicle('SEARCH');
+          }}
+        >
+          🔍 Поиск по документу
+        </button>
+      </div>
+
+      {/* РЕЖИМ ПОИСКА */}
+      {selectedVehicle === 'SEARCH' && (
+        <div className="search-section">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Введите № документа, клиента или адрес..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            autoFocus
+          />
+
+          <div className="points-list">
+            {searchQuery.trim() !== '' && filteredPoints.length === 0 && (
+              <div className="no-results">Ничего не найдено по запросу "{searchQuery}"</div>
             )}
-          </div>
 
-          <div style={{ display: 'grid', gap: '16px' }}>
-            {routes[selectedVehicle].map((point, index) => {
-              const city = point['Факт.Місто доставки'];
-              const street = point['Вулиця'];
-              const house = point['№ Будинку'];
-              const floor = point['Поверх'];
-              const district = point['Район міста'] || point['Район області'];
-              const orderNo = point['Тр.заявка'] || point['№ док-ту'];
-              const weight = point['Вага (кг.)'];
-              const volume = point['Об\'єм (м3)'];
-
-              return (
-                <div
-                  key={index}
-                  style={{
-                    backgroundColor: '#fff',
-                    padding: '16px',
-                    borderRadius: '12px',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-                    borderLeft: '6px solid #0284c7',
-                  }}
-                >
-                  {/* Заголовок точки */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontWeight: 'bold', fontSize: '17px', color: '#0284c7' }}>
-                      Точка № {index + 1}
-                    </span>
-                    {orderNo && (
-                      <span style={{ fontSize: '13px', backgroundColor: '#e2e8f0', color: '#334155', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
-                        Заявка: {orderNo}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Основной адрес */}
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>
-                    📍 {city ? `${city}, ` : ''}{street} {house ? `д. ${house}` : ''}
-                  </div>
-
-                  {/* Доп детали по адресу и грузу */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '14px', color: '#475569', marginBottom: '12px', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
-                    {floor && <div>🏢 <strong>Этаж:</strong> {floor}</div>}
-                    {district && <div>🏙️ <strong>Район:</strong> {district}</div>}
-                    {weight && <div>⚖️ <strong>Вес:</strong> {weight} кг</div>}
-                    {volume && <div>📦 <strong>Объем:</strong> {volume} м³</div>}
-                  </div>
-
-                  {/* Информация о складе/документах */}
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
-                    {point['Склад'] && <div>🏬 Склад: {point['Склад']}</div>}
-                    {point['Код БО'] && <div>🔢 Код БО: {point['Код БО']}</div>}
-                  </div>
-
-                  {/* Кнопка навигации */}
-                  <button
-                    onClick={() => openInGoogleMaps(point)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: '#16a34a',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '15px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    🗺️ Открыть на Google Maps
-                  </button>
+            {filteredPoints.map((point, idx) => (
+              <div key={idx} className="card">
+                <div className="card-header">
+                  <span className="badge-vehicle">🚗 {point.vehicle}</span>
+                  {point.document && <span className="doc-num">📄 Док: {point.document}</span>}
                 </div>
-              );
-            })}
+                <h3>{point.client || 'Клиент не указан'}</h3>
+                <p>📍 <strong>Адрес:</strong> {point.address}</p>
+                {point.phone && <p>📞 <strong>Тел:</strong> <a href={`tel:${point.phone}`}>{point.phone}</a></p>}
+                {point.specs && <p>📦 <strong>Груз:</strong> {point.specs}</p>}
+                
+                {point.address && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(point.address)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-map"
+                  >
+                    🗺️ Открыть карту
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
+        </div>
+      )}
+
+      {/* РЕЖИМ ПРОСМОТРА КОНКРЕТНОЙ МАШИНЫ */}
+      {selectedVehicle && selectedVehicle !== 'SEARCH' && (
+        <div className="points-list">
+          <h2>Маршрут: {selectedVehicle}</h2>
+          {routes[selectedVehicle]?.map((point, idx) => (
+            <div key={idx} className="card">
+              <div className="card-header">
+                <span className="point-number">#{idx + 1}</span>
+                {point.document && <span className="doc-num">📄 {point.document}</span>}
+              </div>
+              <h3>{point.client || 'Без названия'}</h3>
+              <p>📍 <strong>Адрес:</strong> {point.address}</p>
+              {point.phone && <p>📞 <strong>Тел:</strong> <a href={`tel:${point.phone}`}>{point.phone}</a></p>}
+              {point.specs && <p>📦 <strong>Груз:</strong> {point.specs}</p>}
+
+              {point.address && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(point.address)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-map"
+                >
+                  🗺️ Открыть карту
+                </a>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
