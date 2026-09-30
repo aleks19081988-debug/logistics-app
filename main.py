@@ -1,187 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import './App.css';
+import io
+import pandas as pd
+import requests
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-const API_URL = 'https://logistics-backend-3vj1.onrender.com';
+app = FastAPI(title="Logistics App API")
 
-// Функция для универсального поиска значения по нескольким вариациям ключей
-const getFieldValue = (row, possibleKeys) => {
-  for (const key of Object.keys(row)) {
-    const cleanKey = key.trim().toLowerCase();
-    if (possibleKeys.some((p) => cleanKey.includes(p))) {
-      return row[key];
-    }
-  }
-  return '';
-};
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-function App() {
-  const [routes, setRoutes] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1nGRnER-mQj81NugFTaR1rBP87w8a00riPXBFqZDU1dI/edit?gid=0#gid=0"
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/routes-by-vehicle`)
-      .then((res) => res.json())
-      .then((data) => {
-        setRoutes(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Ошибка загрузки:', err);
-        setLoading(false);
-      });
-  }, []);
 
-  if (loading) {
-    return <div className="loader">Загрузка маршрутов...</div>;
-  }
+def get_sheet_data():
+    try:
+        sheet_id = SPREADSHEET_URL.split("/d/")[1].split("/")[0]
+        export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&id={sheet_id}"
 
-  const vehicles = Object.keys(routes);
+        response = requests.get(export_url, timeout=10)
+        response.encoding = "utf-8"
 
-  // Сбор всех точек для глобального поиска
-  const allPoints = [];
-  Object.entries(routes).forEach(([vehicle, points]) => {
-    points.forEach((point) => {
-      allPoints.push({ ...point, _vehicle: vehicle });
-    });
-  });
+        if response.status_code != 200:
+            print(f"❌ Ошибка доступа к Google Таблице (код {response.status_code})")
+            return []
 
-  // Поиск по всем полям строки
-  const filteredPoints = searchQuery.trim() === '' 
-    ? [] 
-    : allPoints.filter((point) => {
-        const query = searchQuery.toLowerCase().trim();
-        // Проверяем все значения в объекте строки
-        return Object.values(point).some((val) =>
-          String(val).toLowerCase().includes(query)
-        );
-      });
+        df = pd.read_csv(io.StringIO(response.text))
+        df = df.fillna("")
+        return df.to_dict(orient="records")
 
-  // Вспомогательная функция для отображения карточки
-  const renderCard = (point, idx, showVehicleBadge = false) => {
-    const client = getFieldValue(point, ['клиент', 'получатель', 'название', 'фирма', 'заказчик']) || 'Клиент не указан';
-    const address = getFieldValue(point, ['адрес', 'город', 'куда', 'доставка', 'точка']) || 'Адрес не указан';
-    const phone = getFieldValue(point, ['телефон', 'тел', 'контакт', 'мобильный']);
-    const doc = getFieldValue(point, ['док', 'ттн', '№', 'накладная', 'номер', 'заказ']);
-    const specs = getFieldValue(point, ['груз', 'вес', 'объем', 'примечание', 'комментарий', 'товар']);
+    except Exception as e:
+        print("❌ Ошибка при чтении таблицы:", e)
+        return []
 
-    // Сбор всех остальных колонок, которые не попали в основные
-    const extraEntries = Object.entries(point).filter(([k]) => {
-      if (k.startsWith('_')) return false;
-      const lk = k.toLowerCase();
-      return !['клиент', 'получатель', 'адрес', 'город', 'телефон', 'тел', 'док', 'ттн', 'накладная', 'авто', 'машина'].some(p => lk.includes(p));
-    });
 
-    return (
-      <div key={idx} className="card">
-        <div className="card-header">
-          {showVehicleBadge ? (
-            <span className="badge-vehicle">🚗 {point._vehicle}</span>
-          ) : (
-            <span className="point-number">#{idx + 1}</span>
-          )}
-          {doc && <span className="doc-num">📄 Док: {doc}</span>}
-        </div>
+@app.get("/")
+def home():
+    return {"status": "online"}
 
-        <h3>{client}</h3>
-        <p>📍 <strong>Адрес:</strong> {address}</p>
-        
-        {phone && (
-          <p>📞 <strong>Тел:</strong> <a href={`tel:${phone}`}>{phone}</a></p>
-        )}
-        
-        {specs && (
-          <p>📦 <strong>Детали:</strong> {specs}</p>
-        )}
 
-        {/* Дополнительные поля из таблицы, если есть */}
-        {extraEntries.length > 0 && (
-          <div className="extra-info">
-            {extraEntries.map(([k, v]) => v ? (
-              <p key={k} className="extra-item">
-                <small><strong>{k}:</strong> {String(v)}</small>
-              </p>
-            ) : null)}
-          </div>
-        )}
+@app.get("/api/routes-by-vehicle")
+def get_routes_by_vehicle():
+    data = get_sheet_data()
+    if not data:
+        return {}
 
-        {address && address !== 'Адрес не указан' && (
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-map"
-          >
-            🗺️ Открыть карту
-          </a>
-        )}
-      </div>
-    );
-  };
+    sample_row = data[0]
 
-  return (
-    <div className="container">
-      <header className="header">
-        <h1>🚚 Маршруты доставки</h1>
-      </header>
+    vehicle_column = None
+    target_names = ["№ авто", "авто", "машина", "автомобіль", "транспорт", "водій", "водитель"]
 
-      {/* Кнопки автомобилей + поиск */}
-      <div className="vehicle-selector">
-        {vehicles.map((v) => (
-          <button
-            key={v}
-            className={`btn-vehicle ${selectedVehicle === v ? 'active' : ''}`}
-            onClick={() => {
-              setSelectedVehicle(v);
-              setSearchQuery('');
-            }}
-          >
-            🚗 {v}
-          </button>
-        ))}
+    for col_name in sample_row.keys():
+        clean_col = str(col_name).strip().lower()
+        if any(t in clean_col for t in target_names):
+            vehicle_column = col_name
+            break
 
-        <button
-          className={`btn-vehicle btn-search-tab ${selectedVehicle === 'SEARCH' ? 'active' : ''}`}
-          onClick={() => {
-            setSelectedVehicle('SEARCH');
-          }}
-        >
-          🔍 Поиск по документу
-        </button>
-      </div>
+    if not vehicle_column:
+        cols = list(sample_row.keys())
+        vehicle_column = cols[1] if len(cols) > 1 else cols[0]
 
-      {/* РЕЖИМ ПОИСКА */}
-      {selectedVehicle === 'SEARCH' && (
-        <div className="search-section">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Введите № документа, ТТН, адрес или клиента..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-          />
+    grouped = {}
+    for row in data:
+        raw_val = str(row.get(vehicle_column, "")).strip()
 
-          <div className="points-list">
-            {searchQuery.trim() !== '' && filteredPoints.length === 0 && (
-              <div className="no-results">Ничего не найдено по запросу "{searchQuery}"</div>
-            )}
+        if raw_val.endswith(".0"):
+            raw_val = raw_val[:-2]
 
-            {filteredPoints.map((point, idx) => renderCard(point, idx, true))}
-          </div>
-        </div>
-      )}
+        if not raw_val or raw_val.lower() in ["nan", "none", "null"]:
+            vehicle_key = "Без номера авто"
+        else:
+            vehicle_key = raw_val
 
-      {/* РЕЖИМ ПРОСМОТРА МАШИНЫ */}
-      {selectedVehicle && selectedVehicle !== 'SEARCH' && (
-        <div className="points-list">
-          <h2>Маршрут: {selectedVehicle}</h2>
-          {routes[selectedVehicle]?.map((point, idx) => renderCard(point, idx, false))}
-        </div>
-      )}
-    </div>
-  );
-}
+        if vehicle_key not in grouped:
+            grouped[vehicle_key] = []
+        grouped[vehicle_key].append(row)
 
-export default App;
+    return grouped

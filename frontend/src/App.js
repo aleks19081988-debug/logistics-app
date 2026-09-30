@@ -28,7 +28,6 @@ function App() {
 
   const vehicles = Object.keys(routes);
 
-  // Сбор всех точек для глобального поиска по документу
   const allPoints = [];
   Object.entries(routes).forEach(([vehicle, points]) => {
     points.forEach((point) => {
@@ -36,7 +35,6 @@ function App() {
     });
   });
 
-  // Фильтрация по запросу пользователя (ищет абсолютно по всем полям)
   const filteredPoints = searchQuery.trim() === '' 
     ? [] 
     : allPoints.filter((point) => {
@@ -46,9 +44,7 @@ function App() {
         );
       });
 
-  // Рендер отдельной карточки
   const renderCard = (point, idx, showVehicleBadge = false) => {
-    // Вспомогательная функция безопасного поиска значения по именам колонок
     const getVal = (possibleNames) => {
       for (const key of Object.keys(point)) {
         if (key.startsWith('_')) continue;
@@ -60,19 +56,17 @@ function App() {
       return '';
     };
 
-    // Точечное извлечение конкретных колонок из вашей таблицы
     const docNum = getVal(['№ док-ту', 'док-ту', 'док', 'заявка', 'тр.заявка']);
-    const city = getFieldValueOrFirst(point, ['факт.місто доставки', 'місто', 'город']);
-    const street = getFieldValueOrFirst(point, ['вулиця', 'улица']);
-    const house = getFieldValueOrFirst(point, ['№ будинку', 'будинок', 'дом']);
-    const client = getFieldValueOrFirst(point, ['клиент', 'отримувач', 'получатель', 'замовник', 'контрагент', 'фирма']);
-    const phone = getFieldValueOrFirst(point, ['телефон', 'тел', 'контакт']);
-    const weight = getFieldValueOrFirst(point, ['вага']);
-    const volume = getFieldValueOrFirst(point, ['об\'єм', 'обем', 'объем']);
-    const warehouse = getFieldValueOrFirst(point, ['склад']);
-    const driver = getFieldValueOrFirst(point, ['водій', 'водитель']);
+    const city = getVal(['факт.місто доставки', 'місто', 'город']);
+    const street = getVal(['вулиця', 'улица']);
+    const house = getVal(['№ будинку', 'будинок', 'дом']);
+    const client = getVal(['клиент', 'отримувач', 'получатель', 'замовник', 'контрагент', 'фирма']);
+    const phone = getVal(['телефон', 'тел', 'контакт']);
+    const weight = getVal(['вага']);
+    const volume = getVal(['об\'єм', 'обем', 'объем']);
+    const warehouse = getVal(['склад']);
+    const driver = getVal(['водій', 'водитель']);
 
-    // Формируем единую строку адреса из города, улицы и дома
     const addressParts = [city, street, house ? `д. ${house}` : ''].filter(Boolean);
     const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'Адрес не указан';
 
@@ -117,24 +111,12 @@ function App() {
     );
   };
 
-  function getFieldValueOrFirst(row, keys) {
-    for (const key of Object.keys(row)) {
-      if (key.startsWith('_')) continue;
-      const cleanKey = key.trim().toLowerCase();
-      if (keys.some((k) => cleanKey.includes(k))) {
-        return String(row[key]).trim();
-      }
-    }
-    return '';
-  }
-
   return (
     <div className="container">
       <header className="header">
         <h1>🚚 Маршруты доставки</h1>
       </header>
 
-      {/* Выбор авто + Поиск */}
       <div className="vehicle-selector">
         {vehicles.map((v) => (
           <button
@@ -159,7 +141,6 @@ function App() {
         </button>
       </div>
 
-      {/* ВКЛАДКА ПОИСКА */}
       {selectedVehicle === 'SEARCH' && (
         <div className="search-section">
           <input
@@ -181,7 +162,6 @@ function App() {
         </div>
       )}
 
-      {/* ПРОСМОТР МАРШРУТА АВТО */}
       {selectedVehicle && selectedVehicle !== 'SEARCH' && (
         <div className="points-list">
           <h2>Маршрут: {selectedVehicle}</h2>
@@ -192,3 +172,4 @@ function App() {
   );
 }
 
+export default App;
