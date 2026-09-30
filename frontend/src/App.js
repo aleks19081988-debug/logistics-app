@@ -32,20 +32,101 @@ function App() {
   const allPoints = [];
   Object.entries(routes).forEach(([vehicle, points]) => {
     points.forEach((point) => {
-      allPoints.push({ ...point, vehicle });
+      allPoints.push({ ...point, _vehicle: vehicle });
     });
   });
 
-  // Фильтрация по номеру документа / клиенту / адресу
+  // Фильтрация по запросу пользователя (ищет абсолютно по всем полям)
   const filteredPoints = searchQuery.trim() === '' 
     ? [] 
-    : allPoints.filter((p) => {
-        const query = searchQuery.toLowerCase();
-        const doc = String(p.document || p.doc || '').toLowerCase();
-        const client = String(p.client || '').toLowerCase();
-        const address = String(p.address || '').toLowerCase();
-        return doc.includes(query) || client.includes(query) || address.includes(query);
+    : allPoints.filter((point) => {
+        const query = searchQuery.toLowerCase().trim();
+        return Object.values(point).some((val) =>
+          String(val).toLowerCase().includes(query)
+        );
       });
+
+  // Рендер отдельной карточки
+  const renderCard = (point, idx, showVehicleBadge = false) => {
+    // Вспомогательная функция безопасного поиска значения по именам колонок
+    const getVal = (possibleNames) => {
+      for (const key of Object.keys(point)) {
+        if (key.startsWith('_')) continue;
+        const cleanKey = key.trim().toLowerCase();
+        if (possibleNames.some((p) => cleanKey.includes(p.toLowerCase()))) {
+          return String(point[key]).trim();
+        }
+      }
+      return '';
+    };
+
+    // Точечное извлечение конкретных колонок из вашей таблицы
+    const docNum = getVal(['№ док-ту', 'док-ту', 'док', 'заявка', 'тр.заявка']);
+    const city = getFieldValueOrFirst(point, ['факт.місто доставки', 'місто', 'город']);
+    const street = getFieldValueOrFirst(point, ['вулиця', 'улица']);
+    const house = getFieldValueOrFirst(point, ['№ будинку', 'будинок', 'дом']);
+    const client = getFieldValueOrFirst(point, ['клиент', 'отримувач', 'получатель', 'замовник', 'контрагент', 'фирма']);
+    const phone = getFieldValueOrFirst(point, ['телефон', 'тел', 'контакт']);
+    const weight = getFieldValueOrFirst(point, ['вага']);
+    const volume = getFieldValueOrFirst(point, ['об\'єм', 'обем', 'объем']);
+    const warehouse = getFieldValueOrFirst(point, ['склад']);
+    const driver = getFieldValueOrFirst(point, ['водій', 'водитель']);
+
+    // Формируем единую строку адреса из города, улицы и дома
+    const addressParts = [city, street, house ? `д. ${house}` : ''].filter(Boolean);
+    const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'Адрес не указан';
+
+    return (
+      <div key={idx} className="card">
+        <div className="card-header">
+          {showVehicleBadge ? (
+            <span className="badge-vehicle">🚗 {point._vehicle}</span>
+          ) : (
+            <span className="point-number">#{idx + 1}</span>
+          )}
+          {docNum && <span className="doc-num">📄 Док: {docNum}</span>}
+        </div>
+
+        {client && <h3>{client}</h3>}
+
+        <p>📍 <strong>Адрес:</strong> {fullAddress}</p>
+
+        {phone && (
+          <p>📞 <strong>Тел:</strong> <a href={`tel:${phone}`}>{phone}</a></p>
+        )}
+
+        {(weight || volume) && (
+          <p>📦 <strong>Параметры:</strong> {weight ? `Вага: ${weight} кг` : ''} {volume ? `| Об'єм: ${volume} м³` : ''}</p>
+        )}
+
+        {(warehouse || driver) && (
+          <p>ℹ️ {warehouse ? `Склад: ${warehouse}` : ''} {driver ? `| Водій: ${driver}` : ''}</p>
+        )}
+
+        {fullAddress !== 'Адрес не указан' && (
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-map"
+          >
+            🗺️ Открыть карту
+          </a>
+        )}
+      </div>
+    );
+  };
+
+  function getFieldValueOrFirst(row, keys) {
+    for (const key of Object.keys(row)) {
+      if (key.startsWith('_')) continue;
+      const cleanKey = key.trim().toLowerCase();
+      if (keys.some((k) => cleanKey.includes(k))) {
+        return String(row[key]).trim();
+      }
+    }
+    return '';
+  }
 
   return (
     <div className="container">
@@ -53,7 +134,7 @@ function App() {
         <h1>🚚 Маршруты доставки</h1>
       </header>
 
-      {/* Список кнопок автомобилей + кнопка поиска в конце */}
+      {/* Выбор авто + Поиск */}
       <div className="vehicle-selector">
         {vehicles.map((v) => (
           <button
@@ -78,13 +159,13 @@ function App() {
         </button>
       </div>
 
-      {/* РЕЖИМ ПОИСКА */}
+      {/* ВКЛАДКА ПОИСКА */}
       {selectedVehicle === 'SEARCH' && (
         <div className="search-section">
           <input
             type="text"
             className="search-input"
-            placeholder="Введите № документа, клиента или адрес..."
+            placeholder="Введите № документа, адрес, город..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             autoFocus
@@ -95,64 +176,19 @@ function App() {
               <div className="no-results">Ничего не найдено по запросу "{searchQuery}"</div>
             )}
 
-            {filteredPoints.map((point, idx) => (
-              <div key={idx} className="card">
-                <div className="card-header">
-                  <span className="badge-vehicle">🚗 {point.vehicle}</span>
-                  {point.document && <span className="doc-num">📄 Док: {point.document}</span>}
-                </div>
-                <h3>{point.client || 'Клиент не указан'}</h3>
-                <p>📍 <strong>Адрес:</strong> {point.address}</p>
-                {point.phone && <p>📞 <strong>Тел:</strong> <a href={`tel:${point.phone}`}>{point.phone}</a></p>}
-                {point.specs && <p>📦 <strong>Груз:</strong> {point.specs}</p>}
-                
-                {point.address && (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(point.address)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn-map"
-                  >
-                    🗺️ Открыть карту
-                  </a>
-                )}
-              </div>
-            ))}
+            {filteredPoints.map((point, idx) => renderCard(point, idx, true))}
           </div>
         </div>
       )}
 
-      {/* РЕЖИМ ПРОСМОТРА КОНКРЕТНОЙ МАШИНЫ */}
+      {/* ПРОСМОТР МАРШРУТА АВТО */}
       {selectedVehicle && selectedVehicle !== 'SEARCH' && (
         <div className="points-list">
           <h2>Маршрут: {selectedVehicle}</h2>
-          {routes[selectedVehicle]?.map((point, idx) => (
-            <div key={idx} className="card">
-              <div className="card-header">
-                <span className="point-number">#{idx + 1}</span>
-                {point.document && <span className="doc-num">📄 {point.document}</span>}
-              </div>
-              <h3>{point.client || 'Без названия'}</h3>
-              <p>📍 <strong>Адрес:</strong> {point.address}</p>
-              {point.phone && <p>📞 <strong>Тел:</strong> <a href={`tel:${point.phone}`}>{point.phone}</a></p>}
-              {point.specs && <p>📦 <strong>Груз:</strong> {point.specs}</p>}
-
-              {point.address && (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(point.address)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-map"
-                >
-                  🗺️ Открыть карту
-                </a>
-              )}
-            </div>
-          ))}
+          {routes[selectedVehicle]?.map((point, idx) => renderCard(point, idx, false))}
         </div>
       )}
     </div>
   );
 }
 
-export default App;
