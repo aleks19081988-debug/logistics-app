@@ -6,12 +6,12 @@ const API_URL = 'https://logistics-backend-3vj1.onrender.com';
 function App() {
   const [routes, setRoutes] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchData = () => {
     setLoading(true);
-    fetch(`${API_URL}/api/routes-by-vehicle`)
+    fetch(`${API_URL}/api/routes-by-vehicle`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         setRoutes(data);
@@ -27,12 +27,16 @@ function App() {
     fetchData();
   }, []);
 
+  // Четкое переключение авто без залипаний
   const handleSelectVehicle = (vehicle) => {
     setSearchQuery('');
     if (selectedVehicle === vehicle) {
-      setSelectedVehicle('');
+      setSelectedVehicle(null);
     } else {
-      setSelectedVehicle(vehicle);
+      setSelectedVehicle(null);
+      setTimeout(() => {
+        setSelectedVehicle(vehicle);
+      }, 50);
     }
   };
 
@@ -87,7 +91,7 @@ function App() {
     const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'Адрес не указан';
 
     return (
-      <div key={`${point._vehicle || 'p'}-${idx}`} className="card">
+      <div key={`${point._vehicle || 'v'}-${idx}-${docNum}`} className="card">
         <div className="card-header">
           {showVehicleBadge ? (
             <span className="badge-vehicle">🚗 {point._vehicle}</span>
