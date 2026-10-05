@@ -27,7 +27,6 @@ function App() {
     fetchData();
   }, []);
 
-  // Четкое переключение авто без залипаний
   const handleSelectVehicle = (vehicle) => {
     setSearchQuery('');
     if (selectedVehicle === vehicle) {
@@ -65,18 +64,24 @@ function App() {
       });
 
   const renderCard = (point, idx, showVehicleBadge = false) => {
+    // Улучшенный поиск значений с поддержкой строгого приоритета
     const getVal = (possibleNames) => {
-      for (const key of Object.keys(point)) {
-        if (key.startsWith('_')) continue;
-        const cleanKey = key.trim().toLowerCase();
-        if (possibleNames.some((p) => cleanKey.includes(p.toLowerCase()))) {
-          return String(point[key]).trim();
+      const keys = Object.keys(point).filter((k) => !k.startsWith('_'));
+      for (const name of possibleNames) {
+        const target = name.toLowerCase();
+        for (const key of keys) {
+          const cleanKey = key.trim().toLowerCase();
+          if (cleanKey === target || cleanKey.includes(target)) {
+            const val = String(point[key]).trim();
+            if (val) return val;
+          }
         }
       }
       return '';
     };
 
-    const docNum = getVal(['№ док-ту', 'док-ту', 'док', 'заявка', 'тр.заявка']);
+    // Приоритет отдаем строго "№ док-ту" и "№ док"
+    const docNum = getVal(['№ док-ту', '№ док', 'док-ту', 'номер док']);
     const city = getVal(['факт.місто доставки', 'місто', 'город']);
     const street = getVal(['вулиця', 'улица']);
     const house = getVal(['№ будинку', 'будинок', 'дом']);
