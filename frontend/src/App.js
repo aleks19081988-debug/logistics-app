@@ -64,7 +64,6 @@ function App() {
       });
 
   const renderCard = (point, idx, showVehicleBadge = false) => {
-    // Улучшенный поиск значений с поддержкой строгого приоритета
     const getVal = (possibleNames) => {
       const keys = Object.keys(point).filter((k) => !k.startsWith('_'));
       for (const name of possibleNames) {
@@ -80,7 +79,6 @@ function App() {
       return '';
     };
 
-    // Приоритет отдаем строго "№ док-ту" и "№ док"
     const docNum = getVal(['№ док-ту', '№ док', 'док-ту', 'номер док']);
     const city = getVal(['факт.місто доставки', 'місто', 'город']);
     const street = getVal(['вулиця', 'улица']);
@@ -91,6 +89,7 @@ function App() {
     const volume = getVal(['об\'єм', 'обем', 'объем']);
     const warehouse = getVal(['склад']);
     const driver = getVal(['водій', 'водитель']);
+    const boCode = getVal(['код бо', 'кодбо', 'код б.о.', 'бо']);
 
     const addressParts = [city, street, house ? `д. ${house}` : ''].filter(Boolean);
     const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'Адрес не указан';
@@ -120,6 +119,10 @@ function App() {
 
         {(warehouse || driver) && (
           <p>ℹ️ {warehouse ? `Склад: ${warehouse}` : ''} {driver ? `| Водій: ${driver}` : ''}</p>
+        )}
+
+        {boCode && (
+          <p>🏢 <strong>Код БО:</strong> {boCode}</p>
         )}
 
         {fullAddress !== 'Адрес не указан' && (
