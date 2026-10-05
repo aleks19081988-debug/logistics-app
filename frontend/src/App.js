@@ -142,7 +142,7 @@ function App() {
   return (
     <div className="container">
       <header className="header">
-        <h1>🚚 Маршруты доставки</h1>
+       <h1>🚚 VEGTAM</h1>
       </header>
 
       <div className="vehicle-selector">
