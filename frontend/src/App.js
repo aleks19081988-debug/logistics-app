@@ -27,7 +27,6 @@ function App() {
     fetchData();
   }, []);
 
-  // Функция переключения авто с гарантированным ререндером
   const handleSelectVehicle = (vehicle) => {
     setSearchQuery('');
     if (selectedVehicle === vehicle) {
@@ -43,7 +42,6 @@ function App() {
 
   const vehicles = Object.keys(routes);
 
-  // Все точки для поиска
   const allPoints = [];
   Object.entries(routes).forEach(([vehicle, points]) => {
     if (Array.isArray(points)) {
@@ -133,7 +131,6 @@ function App() {
     <div className="container">
       <header className="header">
         <h1>🚚 Маршруты доставки</h1>
-        <button className="btn-refresh" onClick={fetchData}>🔄 Обновить</button>
       </header>
 
       <div className="vehicle-selector">
