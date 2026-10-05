@@ -6,7 +6,7 @@ const API_URL = 'https://logistics-backend-3vj1.onrender.com';
 function App() {
   const [routes, setRoutes] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [selectedVehicle, setSelectedVehicle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchData = () => {
@@ -27,16 +27,14 @@ function App() {
     fetchData();
   }, []);
 
-  // Функция переключения авто
+  // Функция переключения авто с гарантированным ререндером
   const handleSelectVehicle = (vehicle) => {
+    setSearchQuery('');
     if (selectedVehicle === vehicle) {
-      // Если нажали на то же авто — снимаем выбор
-      setSelectedVehicle(null);
+      setSelectedVehicle('');
     } else {
-      // Переключаемся на выбранное авто
       setSelectedVehicle(vehicle);
     }
-    setSearchQuery(''); // Сбрасываем поиск при переключении
   };
 
   if (loading) {
@@ -45,11 +43,14 @@ function App() {
 
   const vehicles = Object.keys(routes);
 
+  // Все точки для поиска
   const allPoints = [];
   Object.entries(routes).forEach(([vehicle, points]) => {
-    points.forEach((point) => {
-      allPoints.push({ ...point, _vehicle: vehicle });
-    });
+    if (Array.isArray(points)) {
+      points.forEach((point) => {
+        allPoints.push({ ...point, _vehicle: vehicle });
+      });
+    }
   });
 
   const filteredPoints = searchQuery.trim() === '' 
@@ -88,7 +89,7 @@ function App() {
     const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'Адрес не указан';
 
     return (
-      <div key={idx} className="card">
+      <div key={`${point._vehicle || 'p'}-${idx}`} className="card">
         <div className="card-header">
           {showVehicleBadge ? (
             <span className="badge-vehicle">🚗 {point._vehicle}</span>
@@ -148,9 +149,7 @@ function App() {
 
         <button
           className={`btn-vehicle btn-search-tab ${selectedVehicle === 'SEARCH' ? 'active' : ''}`}
-          onClick={() => {
-            setSelectedVehicle(selectedVehicle === 'SEARCH' ? null : 'SEARCH');
-          }}
+          onClick={() => handleSelectVehicle('SEARCH')}
         >
           🔍 Поиск по документу
         </button>
@@ -177,10 +176,10 @@ function App() {
         </div>
       )}
 
-      {selectedVehicle && selectedVehicle !== 'SEARCH' && (
+      {selectedVehicle && selectedVehicle !== 'SEARCH' && routes[selectedVehicle] && (
         <div className="points-list">
-          <h2>Маршрут: {selectedVehicle} ({routes[selectedVehicle]?.length || 0} точек)</h2>
-          {routes[selectedVehicle]?.map((point, idx) => renderCard(point, idx, false))}
+          <h2>Маршрут: {selectedVehicle} ({routes[selectedVehicle].length} точек)</h2>
+          {routes[selectedVehicle].map((point, idx) => renderCard(point, idx, false))}
         </div>
       )}
     </div>
