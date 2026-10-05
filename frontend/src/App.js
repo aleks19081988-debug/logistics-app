@@ -9,7 +9,8 @@ function App() {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
+  const fetchData = () => {
+    setLoading(true);
     fetch(`${API_URL}/api/routes-by-vehicle`)
       .then((res) => res.json())
       .then((data) => {
@@ -20,7 +21,23 @@ function App() {
         console.error('Ошибка загрузки:', err);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
+
+  // Функция переключения авто
+  const handleSelectVehicle = (vehicle) => {
+    if (selectedVehicle === vehicle) {
+      // Если нажали на то же авто — снимаем выбор
+      setSelectedVehicle(null);
+    } else {
+      // Переключаемся на выбранное авто
+      setSelectedVehicle(vehicle);
+    }
+    setSearchQuery(''); // Сбрасываем поиск при переключении
+  };
 
   if (loading) {
     return <div className="loader">Загрузка маршрутов...</div>;
@@ -115,6 +132,7 @@ function App() {
     <div className="container">
       <header className="header">
         <h1>🚚 Маршруты доставки</h1>
+        <button className="btn-refresh" onClick={fetchData}>🔄 Обновить</button>
       </header>
 
       <div className="vehicle-selector">
@@ -122,10 +140,7 @@ function App() {
           <button
             key={v}
             className={`btn-vehicle ${selectedVehicle === v ? 'active' : ''}`}
-            onClick={() => {
-              setSelectedVehicle(v);
-              setSearchQuery('');
-            }}
+            onClick={() => handleSelectVehicle(v)}
           >
             🚗 {v}
           </button>
@@ -134,7 +149,7 @@ function App() {
         <button
           className={`btn-vehicle btn-search-tab ${selectedVehicle === 'SEARCH' ? 'active' : ''}`}
           onClick={() => {
-            setSelectedVehicle('SEARCH');
+            setSelectedVehicle(selectedVehicle === 'SEARCH' ? null : 'SEARCH');
           }}
         >
           🔍 Поиск по документу
@@ -164,7 +179,7 @@ function App() {
 
       {selectedVehicle && selectedVehicle !== 'SEARCH' && (
         <div className="points-list">
-          <h2>Маршрут: {selectedVehicle}</h2>
+          <h2>Маршрут: {selectedVehicle} ({routes[selectedVehicle]?.length || 0} точек)</h2>
           {routes[selectedVehicle]?.map((point, idx) => renderCard(point, idx, false))}
         </div>
       )}
