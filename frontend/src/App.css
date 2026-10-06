@@ -153,3 +153,43 @@
   margin-top: 20px;
   font-size: 15px;
 }
+/* Стилизация под автономер */
+.license-plate {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ffffff;
+  color: #111111;
+  border: 2px solid #111111;
+  border-radius: 6px;
+  font-family: 'Arial Black', 'Impact', sans-serif;
+  font-size: 1.1rem;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  padding: 2px 8px 2px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  line-height: 1.2;
+}
+
+/* Синяя полоска слева (стандарт UA) */
+.license-plate::before {
+  content: "UA";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0057b7; /* Синий цвет флага */
+  color: #ffd700; /* Желтый цвет текста UA */
+  font-size: 0.65rem;
+  font-weight: 900;
+  width: 22px;
+  height: 100%;
+  margin-right: 8px;
+  padding: 4px 2px;
+  box-sizing: border-box;
+}
+
+/* Изменяем цвет текста для активной/выбранной кнопки */
+.car-btn.active .license-plate {
+  border-color: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+}

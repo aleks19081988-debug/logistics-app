@@ -98,7 +98,13 @@ function App() {
       <div key={`${point._vehicle || 'v'}-${idx}-${docNum}`} className="card">
         <div className="card-header">
           {showVehicleBadge ? (
-            <span className="badge-vehicle">🚗 {point._vehicle}</span>
+            <span className="badge-vehicle">
+              🚗 {point._vehicle === 'Без номера авто' ? (
+                'Без номера'
+              ) : (
+                <span className="license-plate">{point._vehicle}</span>
+              )}
+            </span>
           ) : (
             <span className="point-number">#{idx + 1}</span>
           )}
@@ -118,7 +124,7 @@ function App() {
         )}
 
         {(warehouse || driver) && (
-          <p>ℹ️ {warehouse ? `Склад: ${warehouse}` : ''} {driver ? `| Водій: ${driver}` : ''}</p>
+          <p>ℹ️️ {warehouse ? `Склад: ${warehouse}` : ''} {driver ? `| Водій: ${driver}` : ''}</p>
         )}
 
         {boCode && (
@@ -142,7 +148,7 @@ function App() {
   return (
     <div className="container">
       <header className="header">
-       <h1>🚚 VEGTAM</h1>
+        <h1>🚚 VEGTAM</h1>
       </header>
 
       <div className="vehicle-selector">
@@ -152,7 +158,11 @@ function App() {
             className={`btn-vehicle ${selectedVehicle === v ? 'active' : ''}`}
             onClick={() => handleSelectVehicle(v)}
           >
-            🚗 {v}
+            {v === 'Без номера авто' ? (
+              <span>🚗 Без номера авто</span>
+            ) : (
+              <span className="license-plate">{v}</span>
+            )}
           </button>
         ))}
 
@@ -187,7 +197,15 @@ function App() {
 
       {selectedVehicle && selectedVehicle !== 'SEARCH' && routes[selectedVehicle] && (
         <div className="points-list">
-          <h2>Маршрут: {selectedVehicle} ({routes[selectedVehicle].length} точек)</h2>
+          <h2>
+            Маршрут:{' '}
+            {selectedVehicle === 'Без номера авто' ? (
+              'Без номера авто'
+            ) : (
+              <span className="license-plate">{selectedVehicle}</span>
+            )}{' '}
+            ({routes[selectedVehicle].length} точек)
+          </h2>
           {routes[selectedVehicle].map((point, idx) => renderCard(point, idx, false))}
         </div>
       )}
