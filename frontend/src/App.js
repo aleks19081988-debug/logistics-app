@@ -63,33 +63,51 @@ function App() {
         );
       });
 
-  const renderCard = (point, idx, showVehicleBadge = false) => {
-    const getVal = (possibleNames) => {
-      const keys = Object.keys(point).filter((k) => !k.startsWith('_'));
-      for (const name of possibleNames) {
-        const target = name.toLowerCase();
-        for (const key of keys) {
-          const cleanKey = key.trim().toLowerCase();
-          if (cleanKey === target || cleanKey.includes(target)) {
-            const val = String(point[key]).trim();
-            if (val) return val;
-          }
+  // Вспомогательная функция для извлечения значений из полей карточки
+  const getValFromPoint = (point, possibleNames) => {
+    const keys = Object.keys(point).filter((k) => !k.startsWith('_'));
+    for (const name of possibleNames) {
+      const target = name.toLowerCase();
+      for (const key of keys) {
+        const cleanKey = key.trim().toLowerCase();
+        if (cleanKey === target || cleanKey.includes(target)) {
+          const val = String(point[key]).trim();
+          if (val) return val;
         }
       }
-      return '';
-    };
+    }
+    return '';
+  };
 
-    const docNum = getVal(['№ док-ту', '№ док', 'док-ту', 'номер док']);
-    const city = getVal(['факт.місто доставки', 'місто', 'город']);
-    const street = getVal(['вулиця', 'улица']);
-    const house = getVal(['№ будинку', 'будинок', 'дом']);
-    const client = getVal(['клиент', 'отримувач', 'получатель', 'замовник', 'контрагент', 'фирма']);
-    const phone = getVal(['телефон', 'тел', 'контакт']);
-    const weight = getVal(['вага']);
-    const volume = getVal(['об\'єм', 'обем', 'объем']);
-    const warehouse = getVal(['склад']);
-    const driver = getVal(['водій', 'водитель']);
-    const boCode = getVal(['код бо', 'кодбо', 'код б.о.', 'бо']);
+  // Функция сортировки точек маршрута по Коду БО
+  const getSortedPoints = (pointsArray) => {
+    if (!Array.isArray(pointsArray)) return [];
+    
+    return [...pointsArray].sort((a, b) => {
+      const boA = getValFromPoint(a, ['код бо', 'кодбо', 'код б.о.', 'бо']);
+      const boB = getValFromPoint(b, ['код бо', 'кодбо', 'код б.о.', 'бо']);
+
+      if (!boA && !boB) return 0;
+      if (!boA) return 1;  // Точки без БО отправляем в конец
+      if (!boB) return -1;
+
+      // Сортировка по возрастанию с учетом чисел и букв
+      return boA.localeCompare(boB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  };
+
+  const renderCard = (point, idx, showVehicleBadge = false) => {
+    const docNum = getValFromPoint(point, ['№ док-ту', '№ док', 'док-ту', 'номер док']);
+    const city = getValFromPoint(point, ['факт.місто доставки', 'місто', 'город']);
+    const street = getValFromPoint(point, ['вулиця', 'улица']);
+    const house = getValFromPoint(point, ['№ будинку', 'будинок', 'дом']);
+    const client = getValFromPoint(point, ['клиент', 'отримувач', 'получатель', 'замовник', 'контрагент', 'фирма']);
+    const phone = getValFromPoint(point, ['телефон', 'тел', 'контакт']);
+    const weight = getValFromPoint(point, ['вага']);
+    const volume = getValFromPoint(point, ['об\'єм', 'обем', 'объем']);
+    const warehouse = getValFromPoint(point, ['склад']);
+    const driver = getValFromPoint(point, ['водій', 'водитель']);
+    const boCode = getValFromPoint(point, ['код бо', 'кодбо', 'код б.о.', 'бо']);
 
     const addressParts = [city, street, house ? `д. ${house}` : ''].filter(Boolean);
     const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'Адрес не указан';
@@ -124,7 +142,7 @@ function App() {
         )}
 
         {(warehouse || driver) && (
-          <p>ℹ️️ {warehouse ? `Склад: ${warehouse}` : ''} {driver ? `| Водій: ${driver}` : ''}</p>
+          <p>ℹ️ {warehouse ? `Склад: ${warehouse}` : ''} {driver ? `| Водій: ${driver}` : ''}</p>
         )}
 
         {boCode && (
@@ -206,7 +224,7 @@ function App() {
             )}{' '}
             ({routes[selectedVehicle].length} точек)
           </h2>
-          {routes[selectedVehicle].map((point, idx) => renderCard(point, idx, false))}
+          {getSortedPoints(routes[selectedVehicle]).map((point, idx) => renderCard(point, idx, false))}
         </div>
       )}
     </div>
