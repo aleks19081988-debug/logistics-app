@@ -350,3 +350,12 @@
   color: #ffffff;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
 }
+/* Иконка приложения в заголовке */
+.header-app-icon {
+  width: 36px;
+  height: 36px;
+  margin-right: 10px;
+  vertical-align: middle;
+  border-radius: 8px;
+  object-fit: contain;
+}

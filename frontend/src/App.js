@@ -235,7 +235,10 @@ function App() {
   return (
     <div className="container notranslate" translate="no">
       <header className="header">
-        <h1>🚚 VEGTAM</h1>
+        <h1>
+          <img src="/logo192.png" alt="Icon" className="header-app-icon" onError={(e) => { e.target.src = '/favicon.ico'; }} />
+          VEGTAM
+        </h1>
       </header>
 
       <div className="vehicle-selector">
@@ -295,6 +298,7 @@ function App() {
 
       {selectedVehicle && selectedVehicle !== 'SEARCH' && (
         <div className="points-list">
+          2
           <h2>
             Маршрут:{' '}
             {selectedVehicle === 'Без номера авто' ? (
