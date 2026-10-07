@@ -298,7 +298,6 @@ function App() {
 
       {selectedVehicle && selectedVehicle !== 'SEARCH' && (
         <div className="points-list">
-          2
           <h2>
             Маршрут:{' '}
             {selectedVehicle === 'Без номера авто' ? (
