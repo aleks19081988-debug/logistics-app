@@ -138,19 +138,30 @@ function App() {
     const driver = getValFromPoint(point, ['водій', 'водитель']);
     const boCode = getValFromPoint(point, ['код бо', 'кодбо', 'код б.о.', 'бо']);
     
-    // Новые поля
-    const payment = getValFromPoint(point, ['оплата', 'оплата']);
+    const payment = getValFromPoint(point, ['оплата']);
     const note = getValFromPoint(point, ['примітка', 'примечание', 'примитка']);
 
-    // Строгая проверка: Pick-Up + ИМЕННО Наличная/Готівка (исключаем Б/готівка)
-    const noteLower = note.toLowerCase();
-    const paymentLower = payment.toLowerCase();
-    
-    const hasPickup = noteLower.includes('pick-up');
-    const isNonCash = paymentLower.includes('б/готівка') || paymentLower.includes('безготівк') || paymentLower.includes('картка');
+    // Строгая проверка полей
+    const noteLower = String(note).toLowerCase();
+    const paymentLower = String(payment).toLowerCase();
+
+    // 1. Проверяем наличие Pick-Up
+    const hasPickup = noteLower.includes('pick-up') || noteLower.includes('pickup');
+
+    // 2. Исключаем безнал, карты и б/готівка
+    const isNonCash = paymentLower.includes('б/г') || 
+                      paymentLower.includes('б/готівк') || 
+                      paymentLower.includes('безгот') || 
+                      paymentLower.includes('картк') || 
+                      paymentLower.includes('карта');
+
+    // 3. Подтверждаем чистый наличный расчет
     const isCash = (paymentLower.includes('готівк') || paymentLower.includes('налич')) && !isNonCash;
 
     const isPickupCash = hasPickup && isCash;
+
+    const addressParts = [city, street, house ? `д. ${house}` : ''].filter(Boolean);
+    const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'Адрес не указан';
 
     return (
       <div 
