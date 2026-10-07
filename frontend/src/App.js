@@ -201,8 +201,9 @@ function App() {
           <p>📦 <strong>Параметры:</strong> {weight ? `Вага: ${weight} кг` : ''} {volume ? `| Об'єм: ${volume} м³` : ''}</p>
         )}
 
-        {(payment || note) && (
-          <p>💳 {payment ? `Оплата: ${payment}` : ''} {note ? `| Примітка: ${note}` : ''}</p>
+        {/* Строка выводится ТОЛЬКО если есть наличный расчет */}
+        {isCash && (
+          <p>💳 <strong>Оплата:</strong> {payment} {note ? `| Примітка: ${note}` : ''}</p>
         )}
 
         {(warehouse || driver) && (
