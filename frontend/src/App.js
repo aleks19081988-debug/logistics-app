@@ -263,14 +263,25 @@ function App() {
 
       {selectedVehicle === 'SEARCH' && (
         <div className="search-section">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Введите № документа, адрес, город..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-          />
+          <div className="search-input-wrapper">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Введите № документа, адрес, город..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+            {searchQuery && (
+              <button 
+                className="btn-clear-search" 
+                onClick={() => setSearchQuery('')}
+                aria-label="Очистить поиск"
+              >
+                ✖
+              </button>
+            )}
+          </div>
 
           <div className="points-list">
             {searchQuery.trim() !== '' && filteredPoints.length === 0 && (

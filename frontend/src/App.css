@@ -277,3 +277,38 @@
   color: #052e16 !important;
   font-weight: bold !important;
 }
+/* Обертка поля поиска для позиционирования кнопки очистки */
+.search-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.search-input-wrapper .search-input {
+  padding-right: 40px !important;
+}
+
+/* Кнопка быстрой очистки поиска ✖ */
+.btn-clear-search {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-clear-search:hover,
+.btn-clear-search:active {
+  background: rgba(239, 68, 68, 0.8);
+  color: #ffffff;
+}
