@@ -164,7 +164,7 @@ function App() {
   };
 
   return (
-    <div className="container">
+    <div className="container notranslate">
       <header className="header">
         <h1>🚚 VEGTAM</h1>
       </header>
