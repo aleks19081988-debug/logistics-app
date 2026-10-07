@@ -142,13 +142,15 @@ function App() {
     const payment = getValFromPoint(point, ['оплата', 'оплата']);
     const note = getValFromPoint(point, ['примітка', 'примечание', 'примитка']);
 
-    // Проверка условия: "Pick-Up" в примітке И "Готівковий" (или наличные) в оплате
+    // Строгая проверка: Pick-Up + ИМЕННО Наличная/Готівка (исключаем Б/готівка)
     const noteLower = note.toLowerCase();
     const paymentLower = payment.toLowerCase();
-    const isPickupCash = noteLower.includes('pick-up') && (paymentLower.includes('готівк') || paymentLower.includes('налич'));
+    
+    const hasPickup = noteLower.includes('pick-up');
+    const isNonCash = paymentLower.includes('б/готівка') || paymentLower.includes('безготівк') || paymentLower.includes('картка');
+    const isCash = (paymentLower.includes('готівк') || paymentLower.includes('налич')) && !isNonCash;
 
-    const addressParts = [city, street, house ? `д. ${house}` : ''].filter(Boolean);
-    const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'Адрес не указан';
+    const isPickupCash = hasPickup && isCash;
 
     return (
       <div 
