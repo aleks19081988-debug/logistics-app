@@ -234,10 +234,9 @@
 /* Кислотно-зеленая подсветка для Pick-Up с оплатой наличными */
 .card-pickup-cash {
   border: 2px solid #22c55e !important;
-  background: linear-gradient(135deg, rgba(22, 101, 52, 0.35), rgba(15, 23, 42, 0.95)) !important;
-  box-shadow: 0 0 15px rgba(34, 197, 94, 0.4) !important;
-  position: relative;
-  overflow: hidden;
+  background: linear-gradient(135deg, #0d381e, #0f172a) !important;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.35) !important;
+  color: #f8fafc !important;
 }
 
 .pickup-banner {
@@ -252,4 +251,29 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
   box-shadow: 0 2px 8px rgba(34, 197, 94, 0.5);
+}
+
+/* Принудительно делаем весь текст в подсвеченной карточке ярким */
+.card-pickup-cash p,
+.card-pickup-cash h3,
+.card-pickup-cash span,
+.card-pickup-cash strong {
+  color: #f8fafc !important;
+}
+
+/* Отдельная контрастная плашка для номера документа */
+.card-pickup-cash .doc-num {
+  background-color: #1e293b !important;
+  color: #38bdf8 !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  font-weight: bold !important;
+  border: 1px solid #334155 !important;
+}
+
+/* Яркая кнопка карты для выделенной карточки */
+.card-pickup-cash .btn-map {
+  background-color: #22c55e !important;
+  color: #052e16 !important;
+  font-weight: bold !important;
 }
