@@ -287,18 +287,19 @@
   padding-right: 40px !important;
 }
 
-/* Кнопка быстрой очистки поиска ✖ */
+/* Кнопка быстрой очистки поиска ✖ (красный цвет) */
 .btn-clear-search {
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  color: #94a3b8;
-  font-size: 1.1rem;
-  width: 26px;
-  height: 26px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+  font-size: 1rem;
+  font-weight: bold;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -309,6 +310,7 @@
 
 .btn-clear-search:hover,
 .btn-clear-search:active {
-  background: rgba(239, 68, 68, 0.8);
+  background: #ef4444;
   color: #ffffff;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
 }
