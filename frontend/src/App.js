@@ -95,16 +95,15 @@ function App() {
     });
   };
 
-  // Вспомогательная функция парсинга числовых значений (вес, объем)
+  // Вспомогательная функция парсинга числовых значений
   const parseNum = (strVal) => {
     if (!strVal) return 0;
-    // Заменяем запятые на точки и оставляем только цифры и точку
     const cleaned = String(strVal).replace(',', '.').replace(/[^0-9.]/g, '');
     const num = parseFloat(cleaned);
     return isNaN(num) ? 0 : num;
   };
 
-  // Подсчёт итоговых показателей (Всего точек, Общий вес, Общий объём)
+  // Подсчёт итоговых показателей
   const calculateTotals = (pointsArray) => {
     if (!Array.isArray(pointsArray)) return { count: 0, weight: 0, volume: 0 };
     
@@ -121,7 +120,7 @@ function App() {
 
     return {
       count: pointsArray.length,
-      weight: Math.round(totalWeight * 100) / 100, // Округление до 2 знаков
+      weight: Math.round(totalWeight * 100) / 100,
       volume: Math.round(totalVolume * 100) / 100,
     };
   };
@@ -138,12 +137,30 @@ function App() {
     const warehouse = getValFromPoint(point, ['склад']);
     const driver = getValFromPoint(point, ['водій', 'водитель']);
     const boCode = getValFromPoint(point, ['код бо', 'кодбо', 'код б.о.', 'бо']);
+    
+    // Новые поля
+    const payment = getValFromPoint(point, ['оплата', 'оплата']);
+    const note = getValFromPoint(point, ['примітка', 'примечание', 'примитка']);
+
+    // Проверка условия: "Pick-Up" в примітке И "Готівковий" (или наличные) в оплате
+    const noteLower = note.toLowerCase();
+    const paymentLower = payment.toLowerCase();
+    const isPickupCash = noteLower.includes('pick-up') && (paymentLower.includes('готівк') || paymentLower.includes('налич'));
 
     const addressParts = [city, street, house ? `д. ${house}` : ''].filter(Boolean);
     const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'Адрес не указан';
 
     return (
-      <div key={`${point._vehicle || 'v'}-${idx}-${docNum}`} className="card">
+      <div 
+        key={`${point._vehicle || 'v'}-${idx}-${docNum}`} 
+        className={`card ${isPickupCash ? 'card-pickup-cash' : ''}`}
+      >
+        {isPickupCash && (
+          <div className="pickup-banner">
+            💵 PICK-UP (ГОТІВКОВИЙ)
+          </div>
+        )}
+
         <div className="card-header">
           {showVehicleBadge ? (
             <span className="badge-vehicle">
@@ -169,6 +186,10 @@ function App() {
 
         {(weight || volume) && (
           <p>📦 <strong>Параметры:</strong> {weight ? `Вага: ${weight} кг` : ''} {volume ? `| Об'єм: ${volume} м³` : ''}</p>
+        )}
+
+        {(payment || note) && (
+          <p>💳 {payment ? `Оплата: ${payment}` : ''} {note ? `| Примітка: ${note}` : ''}</p>
         )}
 
         {(warehouse || driver) && (
@@ -258,7 +279,6 @@ function App() {
             )}
           </h2>
 
-          {/* Итоговая сводная карточка по авто */}
           <div className="summary-card">
             <div className="summary-item">
               <span className="summary-label">📍 Точки</span>
