@@ -88,12 +88,42 @@ function App() {
       const boB = getValFromPoint(b, ['код бо', 'кодбо', 'код б.о.', 'бо']);
 
       if (!boA && !boB) return 0;
-      if (!boA) return 1;  // Точки без БО отправляем в конец
+      if (!boA) return 1;
       if (!boB) return -1;
 
-      // Сортировка по возрастанию с учетом чисел и букв
       return boA.localeCompare(boB, undefined, { numeric: true, sensitivity: 'base' });
     });
+  };
+
+  // Вспомогательная функция парсинга числовых значений (вес, объем)
+  const parseNum = (strVal) => {
+    if (!strVal) return 0;
+    // Заменяем запятые на точки и оставляем только цифры и точку
+    const cleaned = String(strVal).replace(',', '.').replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Подсчёт итоговых показателей (Всего точек, Общий вес, Общий объём)
+  const calculateTotals = (pointsArray) => {
+    if (!Array.isArray(pointsArray)) return { count: 0, weight: 0, volume: 0 };
+    
+    let totalWeight = 0;
+    let totalVolume = 0;
+
+    pointsArray.forEach((point) => {
+      const weightStr = getValFromPoint(point, ['вага']);
+      const volumeStr = getValFromPoint(point, ['об\'єм', 'обем', 'объем']);
+
+      totalWeight += parseNum(weightStr);
+      totalVolume += parseNum(volumeStr);
+    });
+
+    return {
+      count: pointsArray.length,
+      weight: Math.round(totalWeight * 100) / 100, // Округление до 2 знаков
+      volume: Math.round(totalVolume * 100) / 100,
+    };
   };
 
   const renderCard = (point, idx, showVehicleBadge = false) => {
@@ -163,8 +193,12 @@ function App() {
     );
   };
 
+  const currentPoints = selectedVehicle && selectedVehicle !== 'SEARCH' ? routes[selectedVehicle] || [] : [];
+  const sortedCurrentPoints = getSortedPoints(currentPoints);
+  const totals = calculateTotals(currentPoints);
+
   return (
-    <div className="container notranslate">
+    <div className="container notranslate" translate="no">
       <header className="header">
         <h1>🚚 VEGTAM</h1>
       </header>
@@ -213,7 +247,7 @@ function App() {
         </div>
       )}
 
-      {selectedVehicle && selectedVehicle !== 'SEARCH' && routes[selectedVehicle] && (
+      {selectedVehicle && selectedVehicle !== 'SEARCH' && (
         <div className="points-list">
           <h2>
             Маршрут:{' '}
@@ -221,10 +255,28 @@ function App() {
               'Без номера авто'
             ) : (
               <span className="license-plate">{selectedVehicle}</span>
-            )}{' '}
-            ({routes[selectedVehicle].length} точек)
+            )}
           </h2>
-          {getSortedPoints(routes[selectedVehicle]).map((point, idx) => renderCard(point, idx, false))}
+
+          {/* Итоговая сводная карточка по авто */}
+          <div className="summary-card">
+            <div className="summary-item">
+              <span className="summary-label">📍 Точки</span>
+              <span className="summary-value">{totals.count}</span>
+            </div>
+            <div className="summary-divider"></div>
+            <div className="summary-item">
+              <span className="summary-label">⚖️ Общий вес</span>
+              <span className="summary-value">{totals.weight} кг</span>
+            </div>
+            <div className="summary-divider"></div>
+            <div className="summary-item">
+              <span className="summary-label">📐 Общий объём</span>
+              <span className="summary-value">{totals.volume} м³</span>
+            </div>
+          </div>
+
+          {sortedCurrentPoints.map((point, idx) => renderCard(point, idx, false))}
         </div>
       )}
     </div>
