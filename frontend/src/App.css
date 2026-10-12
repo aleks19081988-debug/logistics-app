@@ -401,12 +401,13 @@
   overflow: visible;
 }
 
-/* Мчащаяся машинка */
+/* Мчащаяся машинка (всегда едет вперёд) */
 .loader-car {
   position: absolute;
   top: -14px;
   font-size: 1.5rem;
-  animation: drive-car 1.8s infinite ease-in-out;
+  /* Анимация: едет 1.2 секунды, постоянно повторяется, движение линейное (без замедлений) */
+  animation: drive-car 1.2s infinite linear; 
 }
 
 /* Текст загрузки */
@@ -417,26 +418,26 @@
   letter-spacing: 0.3px;
 }
 
-/* Анимация движения машинки туда-сюда по дороге */
+/* Анимация движения машинки слева направо с исчезновением */
 @keyframes drive-car {
   0% {
     left: 0%;
-    transform: translateX(0) scaleX(1);
+    opacity: 1;
   }
-  48% {
-    left: calc(100% - 24px);
-    transform: translateX(0) scaleX(1);
+  80% {
+    left: calc(100% - 24px); /* Доезжает до конца дороги */
+    opacity: 1; /* Машинка видна */
   }
-  50% {
-    left: calc(100% - 24px);
-    transform: translateX(0) scaleX(-1); /* Разворот в другую сторону */
+  90% {
+    left: calc(100% - 24px); /* Стоит в конце */
+    opacity: 0; /* Плавно исчезает */
   }
-  98% {
-    left: 0%;
-    transform: translateX(0) scaleX(-1);
+  95% {
+    left: 0%; /* Мгновенно переносится в начало */
+    opacity: 0; /* Всё ещё не видна */
   }
   100% {
-    left: 0%;
-    transform: translateX(0) scaleX(1);
+    left: 0%; /* Начинает заново в начале */
+    opacity: 1; /* Снова появляется */
   }
 }
