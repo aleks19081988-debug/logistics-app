@@ -40,7 +40,15 @@ function App() {
   };
 
   if (loading) {
-    return <div className="loader">Загрузка маршрутов...</div>;
+    return (
+      <div className="loader-container notranslate" translate="no">
+        <div className="loader-box">
+          <img src="/logo192.png" alt="VEGTAM" className="loader-logo" onError={(e) => { e.target.src = '/favicon.ico'; }} />
+          <div className="loader-spinner"></div>
+          <div className="loader-text">Загрузка маршрутов...</div>
+        </div>
+      </div>
+    );
   }
 
   const vehicles = Object.keys(routes);
