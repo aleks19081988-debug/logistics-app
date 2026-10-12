@@ -44,7 +44,12 @@ function App() {
       <div className="loader-container notranslate" translate="no">
         <div className="loader-box">
           <img src="/logo192.png" alt="VEGTAM" className="loader-logo" onError={(e) => { e.target.src = '/favicon.ico'; }} />
-          <div className="loader-spinner"></div>
+          
+          {/* Дорога с мчащейся машинкой */}
+          <div className="loader-track">
+            <div className="loader-car">🚚</div>
+          </div>
+
           <div className="loader-text">Загрузка маршрутов...</div>
         </div>
       </div>
