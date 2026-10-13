@@ -391,59 +391,75 @@
   object-fit: contain;
 }
 
-/* Дорожка, по которой едет машинка */
-.loader-track {
+/* Контейнер спидометра */
+.speedometer {
   position: relative;
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-  margin-bottom: 24px;
-  overflow: visible;
+  width: 100px;
+  height: 55px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  overflow: hidden;
 }
 
-/* Мчащаяся машинка */
-.loader-car {
+/* Дуга шкалы спидометра */
+.speedometer-arc {
   position: absolute;
-  top: -14px;
-  font-size: 1.5rem;
-  transform: scaleX(-1);
-  animation: drive-car 1.3s infinite linear;
+  top: 0;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 5px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #38bdf8; /* Неоново-голубой цвет шкалы */
+  border-right-color: #38bdf8;
+  transform: rotate(-45deg);
 }
 
-/* Текст загрузки (светлый для темного фона) */
-.loader-text {
-  font-size: 0.95rem;
-  color: #93c5fd;
-  font-weight: 500;
-  letter-spacing: 0.3px;
+/* Точка в центре оси стрелки */
+.speedometer-center {
+  position: absolute;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  background: #38bdf8;
+  border-radius: 50%;
+  z-index: 2;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
 }
 
-/* Анимация движения слева направо */
-@keyframes drive-car {
+/* Стрелка спидометра */
+.speedometer-needle {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 3px;
+  height: 42px;
+  background: linear-gradient(to top, #38bdf8, #ef4444); /* Красный кончик стрелки */
+  border-radius: 2px;
+  transform-origin: bottom center;
+  z-index: 1;
+  animation: gauge-sweep 1.8s infinite ease-in-out;
+}
+
+/* Анимация движения стрелки (набор скорости и лёгкое колебание) */
+@keyframes gauge-sweep {
   0% {
-    left: 0%;
-    opacity: 1;
-    transform: scaleX(-1);
+    transform: translateX(-50%) rotate(-110deg);
   }
-  80% {
-    left: calc(100% - 28px);
-    opacity: 1;
-    transform: scaleX(-1);
+  35% {
+    transform: translateX(-50%) rotate(40deg);
   }
-  88% {
-    left: calc(100% - 28px);
-    opacity: 0;
-    transform: scaleX(-1);
+  45% {
+    transform: translateX(-50%) rotate(25deg);
   }
-  92% {
-    left: 0%;
-    opacity: 0;
-    transform: scaleX(-1);
+  70% {
+    transform: translateX(-50%) rotate(85deg);
+  }
+  85% {
+    transform: translateX(-50%) rotate(70deg);
   }
   100% {
-    left: 0%;
-    opacity: 1;
-    transform: scaleX(-1);
+    transform: translateX(-50%) rotate(-110deg);
   }
 }
