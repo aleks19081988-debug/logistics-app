@@ -391,21 +391,21 @@
   object-fit: contain;
 }
 
-/* Контейнер реалистичного спидометра */
+/* Увеличенный контейнер спидометра */
 .custom-speedometer {
   position: relative;
-  width: 200px;
-  height: 120px;
-  margin-bottom: 18px;
+  width: 280px;         /* Увеличили ширину (было 200px) */
+  height: 170px;        /* Увеличили высоту (было 120px) */
+  margin-bottom: 24px;
   display: flex;
   justify-content: center;
   align-items: flex-end;
   overflow: hidden;
-  border-radius: 100px 100px 0 0;
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+  border-radius: 140px 140px 0 0;
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.45); /* Усиленное неоновое свечение */
 }
 
-/* Изображение шкалы спидометра */
+/* Изображение шкалы */
 .speedometer-img {
   position: absolute;
   top: 0;
@@ -413,38 +413,38 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: brightness(1.1) contrast(1.1);
+  filter: brightness(1.15) contrast(1.1);
 }
 
-/* Центральная втулка оси стрелки */
+/* Центральная втулка */
 .speedometer-real-center {
   position: absolute;
-  bottom: 8px;
-  width: 22px;
-  height: 22px;
+  bottom: 10px;
+  width: 30px;          /* Чуть увеличили втулку */
+  height: 30px;
   background: #111827;
-  border: 3px solid #38bdf8;
+  border: 3.5px solid #38bdf8;
   border-radius: 50%;
   z-index: 3;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
 }
 
-/* Красная неоновая стрелка */
+/* Увеличенная красная неоновая стрелка */
 .speedometer-real-needle {
   position: absolute;
-  bottom: 18px;
+  bottom: 22px;
   left: 50%;
-  width: 4px;
-  height: 75px;
+  width: 5px;           /* Стрелка стала чуть толще и заметнее */
+  height: 105px;        /* Увеличили длину стрелки под новый размер */
   background: linear-gradient(to top, #ef4444 80%, #ff8888 100%);
-  border-radius: 2px;
+  border-radius: 3px;
   transform-origin: bottom center;
   z-index: 2;
-  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.9));
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.95));
   animation: real-gauge-sweep 2s infinite ease-in-out;
 }
 
-/* Динамичное колебание стрелки спидометра */
+/* Динамичное колебание стрелки */
 @keyframes real-gauge-sweep {
   0% {
     transform: translateX(-50%) rotate(-105deg);
