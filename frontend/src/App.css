@@ -391,12 +391,12 @@
   object-fit: contain;
 }
 
-/* Контейнер спидометра */
+/* Увеличенный контейнер спидометра */
 .speedometer {
   position: relative;
-  width: 100px;
-  height: 55px;
-  margin-bottom: 20px;
+  width: 140px;
+  height: 75px;
+  margin-bottom: 22px;
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -407,42 +407,44 @@
 .speedometer-arc {
   position: absolute;
   top: 0;
-  width: 90px;
-  height: 90px;
+  width: 125px;
+  height: 125px;
   border-radius: 50%;
-  border: 5px solid rgba(255, 255, 255, 0.15);
+  border: 7px solid rgba(255, 255, 255, 0.12);
   border-top-color: #38bdf8; /* Неоново-голубой цвет шкалы */
   border-right-color: #38bdf8;
   transform: rotate(-45deg);
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4));
 }
 
 /* Точка в центре оси стрелки */
 .speedometer-center {
   position: absolute;
   bottom: 0;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   background: #38bdf8;
   border-radius: 50%;
   z-index: 2;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.9);
 }
 
-/* Стрелка спидометра */
+/* Увеличенная стрелка спидометра */
 .speedometer-needle {
   position: absolute;
-  bottom: 5px;
+  bottom: 6px;
   left: 50%;
-  width: 3px;
-  height: 42px;
-  background: linear-gradient(to top, #38bdf8, #ef4444); /* Красный кончик стрелки */
+  width: 4px;
+  height: 58px;
+  background: linear-gradient(to top, #38bdf8 20%, #ef4444 100%); /* Градиент к ярко-красному кончику */
   border-radius: 2px;
   transform-origin: bottom center;
   z-index: 1;
+  filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.7));
   animation: gauge-sweep 1.8s infinite ease-in-out;
 }
 
-/* Анимация движения стрелки (набор скорости и лёгкое колебание) */
+/* Анимация движения стрелки (набор скорости и колебания) */
 @keyframes gauge-sweep {
   0% {
     transform: translateX(-50%) rotate(-110deg);
