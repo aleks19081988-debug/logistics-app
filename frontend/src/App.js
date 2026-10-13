@@ -39,17 +39,17 @@ function App() {
     }
   };
 
-  if (loading) {
+ if (loading) {
     return (
       <div className="loader-container notranslate" translate="no">
         <div className="loader-box">
           <img src="/logo192.png" alt="VEGTAM" className="loader-logo" onError={(e) => { e.target.src = '/favicon.ico'; }} />
           
-          {/* Спидометр */}
-          <div className="speedometer">
-            <div className="speedometer-arc"></div>
-            <div className="speedometer-needle"></div>
-            <div className="speedometer-center"></div>
+          {/* Реалистичный спидометр с фоновым фото и анимированной стрелкой */}
+          <div className="custom-speedometer">
+            <img src="/speedometer-bg.jpg" alt="Speedometer" className="speedometer-img" />
+            <div className="speedometer-real-needle"></div>
+            <div className="speedometer-real-center"></div>
           </div>
 
           <div className="loader-text">Загрузка маршрутов...</div>
