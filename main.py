@@ -17,8 +17,9 @@ app.add_middleware(
 
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1nGRnER-mQj81NugFTaR1rBP87w8a00riPXBFqZDU1dI/edit?gid=0#gid=0"
 
-# Координаты постоянной точки старта: СКЛАД (ул. Полярная, 20, Киев)
-WAREHOUSE_ADDRESS = "Киев, ул. Полярная, 20"
+# Захардкоженные точные координаты склада (ул. Полярная, 20, Киев)
+WAREHOUSE_LAT = 50.5181
+WAREHOUSE_LON = 30.4727
 
 def get_coordinates(address: str):
     """Получает широту и долготу по текстовому адресу через Nominatim (OpenStreetMap)"""
@@ -51,7 +52,7 @@ def get_coordinates(address: str):
 def calculate_distance(lat1, lon1, lat2, lon2):
     """Считает расстояние в километрах между двумя точками по формуле Haversine"""
     if None in (lat1, lon1, lat2, lon2):
-        return float('inf') # Если координат нет, отправляем в конец списка
+        return float('inf')  # Если координат нет, отправляем в конец списка
     R = 6371.0  # Радиус Земли в км
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
@@ -118,8 +119,8 @@ def get_routes_by_vehicle():
             address_column = col_name
             break
 
-    # Получаем координаты склада для точки отсчета
-    warehouse_lat, warehouse_lon = get_coordinates(WAREHOUSE_ADDRESS)
+    # Используем захардкоженные координаты склада
+    warehouse_lat, warehouse_lon = WAREHOUSE_LAT, WAREHOUSE_LON
 
     grouped = {}
     for row in data:
@@ -136,7 +137,7 @@ def get_routes_by_vehicle():
         if vehicle_key not in grouped:
             grouped[vehicle_key] = []
         
-        # Если нашли колонку с адресом, посчитаем координаты и расстояние до склада
+        # Если нашли колонку с адресом, геокодируем и считаем расстояние до склада
         if address_column:
             addr_text = str(row.get(address_column, ""))
             lat, lon = get_coordinates(addr_text)
