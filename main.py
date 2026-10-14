@@ -143,6 +143,7 @@ def get_routes_by_vehicle():
             lat, lon = get_coordinates(addr_text)
             distance = calculate_distance(warehouse_lat, warehouse_lon, lat, lon)
             row["calculated_distance"] = round(distance, 1) if distance != float('inf') else None
+            print(f"📍 Адрес: {addr_text} | Координаты: {lat}, {lon} | Расстояние: {row['calculated_distance']} км")
         else:
             row["calculated_distance"] = None
 
