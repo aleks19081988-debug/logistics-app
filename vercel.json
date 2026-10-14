@@ -1,13 +1,12 @@
 {
-  "headers": [
+  "routes": [
     {
-      "source": "/.well-known/assetlinks.json",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/json"
-        }
-      ]
+      "src": "/.well-known/assetlinks.json",
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "public, max-age=86400, immutable"
+      },
+      "dest": "/.well-known/assetlinks.json"
     }
   ]
 }
