@@ -1,4 +1,5 @@
 import io
+import math
 import pandas as pd
 import requests
 from fastapi import FastAPI
@@ -15,6 +16,50 @@ app.add_middleware(
 )
 
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1nGRnER-mQj81NugFTaR1rBP87w8a00riPXBFqZDU1dI/edit?gid=0#gid=0"
+
+# Координаты постоянной точки старта: СКЛАД (ул. Полярная, 20, Киев)
+WAREHOUSE_ADDRESS = "Киев, ул. Полярная, 20"
+
+def get_coordinates(address: str):
+    """Получает широту и долготу по текстовому адресу через Nominatim (OpenStreetMap)"""
+    if not address or not str(address).strip():
+        return None, None
+    
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {
+        "q": str(address),
+        "format": "json",
+        "limit": 1
+    }
+    headers = {
+        "User-Agent": "VegtamLogisticsApp/1.0"
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=5)
+        if response.status_code == 200:
+            results = response.json()
+            if results:
+                lat = float(results[0]["lat"])
+                lon = float(results[0]["lon"])
+                return lat, lon
+    except Exception as e:
+        print(f"❌ Ошибка геокодирования для адреса '{address}':", e)
+        
+    return None, None
+
+def calculate_distance(lat1, lon1, lat2, lon2):
+    """Считает расстояние в километрах между двумя точками по формуле Haversine"""
+    if None in (lat1, lon1, lat2, lon2):
+        return float('inf') # Если координат нет, отправляем в конец списка
+    R = 6371.0  # Радиус Земли в км
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 + 
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * 
+         math.sin(dlon / 2) ** 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 
 def get_sheet_data():
@@ -51,9 +96,9 @@ def get_routes_by_vehicle():
 
     sample_row = data[0]
 
+    # Ищем колонку автомобиля
     vehicle_column = None
     target_names = ["№ авто", "авто", "машина", "автомобіль", "транспорт", "водій", "водитель"]
-
     for col_name in sample_row.keys():
         clean_col = str(col_name).strip().lower()
         if any(t in clean_col for t in target_names):
@@ -63,6 +108,18 @@ def get_routes_by_vehicle():
     if not vehicle_column:
         cols = list(sample_row.keys())
         vehicle_column = cols[1] if len(cols) > 1 else cols[0]
+
+    # Ищем колонку адреса
+    address_column = None
+    address_names = ["адрес", "адреса", "пункт", "місце", "куди"]
+    for col_name in sample_row.keys():
+        clean_col = str(col_name).strip().lower()
+        if any(a in clean_col for a in address_names):
+            address_column = col_name
+            break
+
+    # Получаем координаты склада для точки отсчета
+    warehouse_lat, warehouse_lon = get_coordinates(WAREHOUSE_ADDRESS)
 
     grouped = {}
     for row in data:
@@ -78,6 +135,20 @@ def get_routes_by_vehicle():
 
         if vehicle_key not in grouped:
             grouped[vehicle_key] = []
+        
+        # Если нашли колонку с адресом, посчитаем координаты и расстояние до склада
+        if address_column:
+            addr_text = str(row.get(address_column, ""))
+            lat, lon = get_coordinates(addr_text)
+            distance = calculate_distance(warehouse_lat, warehouse_lon, lat, lon)
+            row["calculated_distance"] = round(distance, 1) if distance != float('inf') else None
+        else:
+            row["calculated_distance"] = None
+
         grouped[vehicle_key].append(row)
+
+    # Сортируем точки для каждого автомобиля от ближайшей к складу к самой дальней
+    for vehicle_key in grouped:
+        grouped[vehicle_key].sort(key=lambda x: x["calculated_distance"] if x["calculated_distance"] is not None else 999999)
 
     return grouped
