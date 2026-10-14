@@ -52,8 +52,8 @@ def get_coordinates(address: str):
 def calculate_distance(lat1, lon1, lat2, lon2):
     """Считает расстояние в километрах между двумя точками по формуле Haversine"""
     if None in (lat1, lon1, lat2, lon2):
-        return float('inf')  # Если координат нет, отправляем в конец списка
-    R = 6371.0  # Радиус Земли в км
+        return float('inf')
+    R = 6371.0
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     a = (math.sin(dlat / 2) ** 2 + 
@@ -93,9 +93,11 @@ def home():
 def get_routes_by_vehicle():
     data = get_sheet_data()
     if not data:
+        print("⚠️ Таблица пуста или не удалось прочитать данные!")
         return {}
 
     sample_row = data[0]
+    print(f"🔍 Найденные колонки в таблице: {list(sample_row.keys())}")
 
     # Ищем колонку автомобиля
     vehicle_column = None
@@ -119,7 +121,8 @@ def get_routes_by_vehicle():
             address_column = col_name
             break
 
-    # Используем захардкоженные координаты склада
+    print(f"🎯 Выбрана колонка авто: '{vehicle_column}' | Выбрана колонка адреса: '{address_column}'")
+
     warehouse_lat, warehouse_lon = WAREHOUSE_LAT, WAREHOUSE_LON
 
     grouped = {}
@@ -137,7 +140,6 @@ def get_routes_by_vehicle():
         if vehicle_key not in grouped:
             grouped[vehicle_key] = []
         
-        # Если нашли колонку с адресом, геокодируем и считаем расстояние до склада
         if address_column:
             addr_text = str(row.get(address_column, ""))
             lat, lon = get_coordinates(addr_text)
@@ -149,7 +151,6 @@ def get_routes_by_vehicle():
 
         grouped[vehicle_key].append(row)
 
-    # Сортируем точки для каждого автомобиля от ближайшей к складу к самой дальней
     for vehicle_key in grouped:
         grouped[vehicle_key].sort(key=lambda x: x["calculated_distance"] if x["calculated_distance"] is not None else 999999)
 
