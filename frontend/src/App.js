@@ -162,7 +162,7 @@ function App() {
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '8px', textAlign: 'left', fontWeight: 'bold' }}>
-                Введите номер авто (или PIN диспетчера):
+                Введите номер авто:
               </label>
               <input
                 type="text"
@@ -193,10 +193,6 @@ function App() {
               🚚 Войти в маршрут
             </button>
           </form>
-          
-          <div style={{ marginTop: '20px', fontSize: '12px', color: '#888' }}>
-            Подсказка: логист может войти по коду <code>0000</code>
-          </div>
         </div>
       </div>
     );
@@ -398,7 +394,6 @@ function App() {
     );
   };
 
-  // Выбираем точки для отображения в зависимости от роли
   const activeVehicleKey = authRole === 'DRIVER' ? assignedVehicle : selectedVehicle;
   const currentPoints = activeVehicleKey && activeVehicleKey !== 'SEARCH' ? routes[activeVehicleKey] || [] : [];
   const sortedCurrentPoints = getSortedPoints(currentPoints);
@@ -422,7 +417,6 @@ function App() {
         </button>
       </header>
 
-      {/* Выбор машин только для ЛОГИСТА (ADMIN) */}
       {authRole === 'ADMIN' && (
         <div className="vehicle-selector">
           {vehicles.map((v) => (
@@ -448,7 +442,6 @@ function App() {
         </div>
       )}
 
-      {/* Режим ПОИСКА для Логиста */}
       {authRole === 'ADMIN' && selectedVehicle === 'SEARCH' && (
         <div className="search-section">
           <div className="search-input-wrapper">
@@ -481,7 +474,6 @@ function App() {
         </div>
       )}
 
-      {/* ОТОБРАЖЕНИЕ МАРШРУТА (И для водителя, и для выбранной машины логиста) */}
       {activeVehicleKey && activeVehicleKey !== 'SEARCH' && (
         <div className="points-list">
           <h2>
@@ -514,7 +506,6 @@ function App() {
         </div>
       )}
 
-      {/* Модальное окно «Детально» */}
       {activeDetailsDoc && (
         <div className="modal-backdrop" style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
