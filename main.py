@@ -1,7 +1,4 @@
 import io
-import math
-import re
-import time
 import pandas as pd
 import requests
 from fastapi import FastAPI
@@ -19,89 +16,6 @@ app.add_middleware(
 
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1nGRnER-mQj81NugFTaR1rBP87w8a00riPXBFqZDU1dI/edit?gid=0#gid=0"
 DETAILS_GID = "1361088490"
-
-WAREHOUSE_LAT = 50.5181
-WAREHOUSE_LON = 30.4727
-
-# Кэш в памяти для адресов, чтобы не запрашивать их повторно и избавиться от зависаний
-COORDINATES_CACHE = {}
-
-
-def get_coordinates(city: str, street: str, house: str):
-    """Получает координаты с использованием кэша"""
-    city_clean = re.sub(r'\([^)]*\)', '', city).strip()
-    street_clean = re.sub(r'\([^)]*\)', '', street).replace('ул.', '').strip()
-    house_clean = str(house).strip()
-    
-    cache_key = f"{city_clean}|{street_clean}|{house_clean}"
-    if cache_key in COORDINATES_CACHE:
-        return COORDINATES_CACHE[cache_key]
-
-    if not city_clean and not street_clean:
-        return None, None
-    
-    url = "https://nominatim.openstreetmap.org/search"
-    params = {
-        "city": city_clean,
-        "street": f"{street_clean} {house_clean}".strip(),
-        "country": "Ukraine",
-        "format": "json",
-        "limit": 1
-    }
-    headers = {
-        "User-Agent": "VegtamLogisticsApp/1.0 (vegtam.logistics@gmail.com)"
-    }
-    
-    try:
-        time.sleep(1.0)
-        response = requests.get(url, params=params, headers=headers, timeout=3)
-        
-        if response.status_code == 200:
-            results = response.json()
-            if results:
-                lat, lon = float(results[0]["lat"]), float(results[0]["lon"])
-                COORDINATES_CACHE[cache_key] = (lat, lon)
-                return lat, lon
-            else:
-                res = get_coordinates_fallback(city_clean)
-                COORDINATES_CACHE[cache_key] = res
-                return res
-        else:
-            print(f"❌ Ошибка Nominatim (код {response.status_code})")
-    except Exception as e:
-        print(f"❌ Ошибка запроса к геокодеру:", e)
-        
-    COORDINATES_CACHE[cache_key] = (None, None)
-    return None, None
-
-
-def get_coordinates_fallback(city_name: str):
-    if not city_name:
-        return None, None
-    url = "https://nominatim.openstreetmap.org/search"
-    params = {"city": city_name, "country": "Ukraine", "format": "json", "limit": 1}
-    headers = {"User-Agent": "VegtamLogisticsApp/1.0 (vegtam.logistics@gmail.com)"}
-    try:
-        time.sleep(0.5)
-        resp = requests.get(url, params=params, headers=headers, timeout=3)
-        if resp.status_code == 200 and resp.json():
-            return float(resp.json()[0]["lat"]), float(resp.json()[0]["lon"])
-    except Exception:
-        pass
-    return None, None
-
-
-def calculate_distance(lat1, lon1, lat2, lon2):
-    if None in (lat1, lon1, lat2, lon2):
-        return float('inf')
-    R = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = (math.sin(dlat / 2) ** 2 + 
-         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * 
-         math.sin(dlon / 2) ** 2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
 
 
 def get_sheet_data(gid="0"):
@@ -157,18 +71,9 @@ def get_routes_by_vehicle():
         if vehicle_key not in grouped:
             grouped[vehicle_key] = []
         
-        city = str(row.get("Факт.Місто доставки", ""))
-        street = str(row.get("Вулиця", ""))
-        house = str(row.get("№ будинку", ""))
-
-        lat, lon = get_coordinates(city, street, house)
-        distance = calculate_distance(WAREHOUSE_LAT, WAREHOUSE_LON, lat, lon)
-        row["calculated_distance"] = round(distance, 1) if distance != float('inf') else None
-
+        # Без геокодинга просто передаем координаты и расстояние как None
+        row["calculated_distance"] = None
         grouped[vehicle_key].append(row)
-
-    for vehicle_key in grouped:
-        grouped[vehicle_key].sort(key=lambda x: x["calculated_distance"] if x["calculated_distance"] is not None else 999999)
 
     return grouped
 
