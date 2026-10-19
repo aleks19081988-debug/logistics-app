@@ -13,6 +13,8 @@ function App() {
   const [activeDetailsDoc, setActiveDetailsDoc] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsData, setDetailsData] = useState(null);
+  // Флаг, является ли открытый заказ наличным Pick-Up
+  const [isCurrentDocPickupCash, setIsCurrentDocPickupCash] = useState(false);
 
   const fetchData = () => {
     setLoading(true);
@@ -32,10 +34,11 @@ function App() {
     fetchData();
   }, []);
 
-  // Функция запроса детальной информации по документу
-  const handleOpenDetails = (docNum) => {
+  // Функция запроса детальной информации по документу с учетом флага Pick-Up + Cash
+  const handleOpenDetails = (docNum, isPickupCash) => {
     if (!docNum) return;
     setActiveDetailsDoc(docNum);
+    setIsCurrentDocPickupCash(isPickupCash);
     setDetailsLoading(true);
     setDetailsData(null);
 
@@ -54,6 +57,7 @@ function App() {
   const handleCloseDetails = () => {
     setActiveDetailsDoc(null);
     setDetailsData(null);
+    setIsCurrentDocPickupCash(false);
   };
 
   const handleSelectVehicle = (vehicle) => {
@@ -262,7 +266,7 @@ function App() {
           {docNum && (
             <button
               className="btn-details"
-              onClick={() => handleOpenDetails(docNum)}
+              onClick={() => handleOpenDetails(docNum, isPickupCash)}
               style={{
                 flex: 1,
                 backgroundColor: '#007bff',
@@ -415,19 +419,24 @@ function App() {
                       <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '4px' }}>{item.name}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#555' }}>
                         <span>Кол-во: <strong>{item.quantity} шт.</strong></span>
-                        <span style={{ color: '#28a745', fontWeight: 'bold' }}>{item.price} грн</span>
+                        {/* Выводим цену ТОЛЬКО для Pick-Up с наличным расчетом */}
+                        {isCurrentDocPickupCash && (
+                          <span style={{ color: '#28a745', fontWeight: 'bold' }}>{item.price} грн</span>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* Подсчет общей суммы */}
-                <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '2px solid #eee', display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 'bold' }}>
-                  <span>Итого сумма:</span>
-                  <span style={{ color: '#28a745' }}>
-                    {detailsData.items.reduce((sum, item) => sum + parseNum(item.price), 0)} грн
-                  </span>
-                </div>
+                {/* Итоговая сумма отображается тоже только для наличных Pick-Up */}
+                {isCurrentDocPickupCash && (
+                  <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '2px solid #eee', display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 'bold' }}>
+                    <span>Итого к оплате наличными:</span>
+                    <span style={{ color: '#28a745' }}>
+                      {detailsData.items.reduce((sum, item) => sum + parseNum(item.price), 0)} грн
+                    </span>
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>Товары не найдены для данного документа.</div>
