@@ -2,19 +2,41 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 
 const API_URL = 'https://logistics-backend-3vj1.onrender.com';
+const ADMIN_PIN = '0000'; // Пароль для доступа логиста ко всем машинам
 
 function App() {
   const [routes, setRoutes] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
+
+  // Авторизация и доступ
+  const [loginInput, setLoginInput] = useState('');
+  const [authRole, setAuthRole] = useState(null); // 'DRIVER' или 'ADMIN'
+  const [assignedVehicle, setAssignedVehicle] = useState(null); // Для водителя
+  const [selectedVehicle, setSelectedVehicle] = useState(null); // Для админа
+  const [loginError, setLoginError] = useState('');
+
+  // Поиск (для логиста)
   const [searchQuery, setSearchQuery] = useState('');
 
   // Состояния для модального окна «Детально»
   const [activeDetailsDoc, setActiveDetailsDoc] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsData, setDetailsData] = useState(null);
-  // Флаг, является ли открытый заказ наличным Pick-Up
   const [isCurrentDocPickupCash, setIsCurrentDocPickupCash] = useState(false);
+
+  // При загрузке проверяем, не был ли выполнен вход ранее
+  useEffect(() => {
+    const savedRole = localStorage.getItem('vegtam_role');
+    const savedVehicle = localStorage.getItem('vegtam_vehicle');
+
+    if (savedRole) {
+      setAuthRole(savedRole);
+      if (savedRole === 'DRIVER' && savedVehicle) {
+        setAssignedVehicle(savedVehicle);
+      }
+    }
+    fetchData();
+  }, []);
 
   const fetchData = () => {
     setLoading(true);
@@ -30,11 +52,52 @@ function App() {
       });
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Логика входа в приложение
+  const handleLogin = (e) => {
+    e.preventDefault();
+    setLoginError('');
+    const query = loginInput.trim().toLowerCase();
 
-  // Функция запроса детальной информации по документу с учетом флага Pick-Up + Cash
+    if (!query) {
+      setLoginError('Пожалуйста, введите номер авто');
+      return;
+    }
+
+    // Вход для логиста по PIN-коду
+    if (query === ADMIN_PIN) {
+      setAuthRole('ADMIN');
+      localStorage.setItem('vegtam_role', 'ADMIN');
+      localStorage.removeItem('vegtam_vehicle');
+      const firstVehicle = Object.keys(routes)[0] || null;
+      setSelectedVehicle(firstVehicle);
+      return;
+    }
+
+    // Ищем совпадение номера авто в загруженных маршрутах
+    const vehicles = Object.keys(routes);
+    const matchedVehicle = vehicles.find((v) => 
+      v.toLowerCase().includes(query) || query.includes(v.toLowerCase().replace(/\s+/g, ''))
+    );
+
+    if (matchedVehicle) {
+      setAuthRole('DRIVER');
+      setAssignedVehicle(matchedVehicle);
+      localStorage.setItem('vegtam_role', 'DRIVER');
+      localStorage.setItem('vegtam_vehicle', matchedVehicle);
+    } else {
+      setLoginError(`Автомобиль с номером "${loginInput}" не найден в маршрутах на сегодня.`);
+    }
+  };
+
+  const handleLogout = () => {
+    setAuthRole(null);
+    setAssignedVehicle(null);
+    setSelectedVehicle(null);
+    setLoginInput('');
+    localStorage.removeItem('vegtam_role');
+    localStorage.removeItem('vegtam_vehicle');
+  };
+
   const handleOpenDetails = (docNum, isPickupCash) => {
     if (!docNum) return;
     setActiveDetailsDoc(docNum);
@@ -72,19 +135,68 @@ function App() {
     }
   };
 
- if (loading) {
+  if (loading) {
     return (
       <div className="loader-container notranslate" translate="no">
         <div className="loader-box">
           <img src="/logo192.png" alt="VEGTAM" className="loader-logo" onError={(e) => { e.target.src = '/favicon.ico'; }} />
-          
           <div className="custom-speedometer">
             <img src="/speedometer-bg.jpg" alt="Speedometer" className="speedometer-img" />
             <div className="speedometer-real-needle"></div>
             <div className="speedometer-real-center"></div>
           </div>
-
           <div className="loader-text">Загрузка маршрутов...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ЭКРАН АВТОРИЗАЦИИ
+  if (!authRole) {
+    return (
+      <div className="container notranslate" translate="no" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+        <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '30px 20px', width: '100%', maxWidth: '400px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', textAlign: 'center' }}>
+          <img src="/logo192.png" alt="VEGTAM" style={{ width: '70px', marginBottom: '10px' }} onError={(e) => { e.target.src = '/favicon.ico'; }} />
+          <h2 style={{ margin: '0 0 20px 0', color: '#2c3e50' }}>VEGTAM LOGISTICS</h2>
+          
+          <form onSubmit={handleLogin}>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '8px', textAlign: 'left', fontWeight: 'bold' }}>
+                Введите номер авто (или PIN диспетчера):
+              </label>
+              <input
+                type="text"
+                placeholder="Например: 9350"
+                value={loginInput}
+                onChange={(e) => setLoginInput(e.target.value)}
+                style={{
+                  width: '100%', padding: '14px', fontSize: '18px', borderRadius: '8px',
+                  border: '2px solid #007bff', textAlign: 'center', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box'
+                }}
+                autoFocus
+              />
+            </div>
+
+            {loginError && (
+              <div style={{ color: '#dc3545', fontSize: '14px', marginBottom: '15px', backgroundColor: '#f8d7da', padding: '10px', borderRadius: '6px' }}>
+                {loginError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              style={{
+                width: '100%', padding: '14px', backgroundColor: '#007bff', color: '#fff',
+                border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
+              🚚 Войти в маршрут
+            </button>
+          </form>
+          
+          <div style={{ marginTop: '20px', fontSize: '12px', color: '#888' }}>
+            Подсказка: логист может войти по коду <code>0000</code>
+          </div>
         </div>
       </div>
     );
@@ -286,43 +398,58 @@ function App() {
     );
   };
 
-  const currentPoints = selectedVehicle && selectedVehicle !== 'SEARCH' ? routes[selectedVehicle] || [] : [];
+  // Выбираем точки для отображения в зависимости от роли
+  const activeVehicleKey = authRole === 'DRIVER' ? assignedVehicle : selectedVehicle;
+  const currentPoints = activeVehicleKey && activeVehicleKey !== 'SEARCH' ? routes[activeVehicleKey] || [] : [];
   const sortedCurrentPoints = getSortedPoints(currentPoints);
   const totals = calculateTotals(currentPoints);
 
   return (
     <div className="container notranslate" translate="no">
-      <header className="header">
+      <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>
           <img src="/logo192.png" alt="Icon" className="header-app-icon" onError={(e) => { e.target.src = '/favicon.ico'; }} />
           VEGTAM
         </h1>
+        <button 
+          onClick={handleLogout}
+          style={{
+            backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '6px',
+            padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
+          }}
+        >
+          🚪 Выйти
+        </button>
       </header>
 
-      <div className="vehicle-selector">
-        {vehicles.map((v) => (
+      {/* Выбор машин только для ЛОГИСТА (ADMIN) */}
+      {authRole === 'ADMIN' && (
+        <div className="vehicle-selector">
+          {vehicles.map((v) => (
+            <button
+              key={v}
+              className={`btn-vehicle ${selectedVehicle === v ? 'active' : ''}`}
+              onClick={() => handleSelectVehicle(v)}
+            >
+              {v === 'Без номера авто' ? (
+                <span>🚗 Без номера</span>
+              ) : (
+                <span className="license-plate">{v}</span>
+              )}
+            </button>
+          ))}
+
           <button
-            key={v}
-            className={`btn-vehicle ${selectedVehicle === v ? 'active' : ''}`}
-            onClick={() => handleSelectVehicle(v)}
+            className={`btn-vehicle btn-search-tab ${selectedVehicle === 'SEARCH' ? 'active' : ''}`}
+            onClick={() => handleSelectVehicle('SEARCH')}
           >
-            {v === 'Без номера авто' ? (
-              <span>🚗 Без номера авто</span>
-            ) : (
-              <span className="license-plate">{v}</span>
-            )}
+            🔍 Поиск
           </button>
-        ))}
+        </div>
+      )}
 
-        <button
-          className={`btn-vehicle btn-search-tab ${selectedVehicle === 'SEARCH' ? 'active' : ''}`}
-          onClick={() => handleSelectVehicle('SEARCH')}
-        >
-          🔍 Поиск по документу
-        </button>
-      </div>
-
-      {selectedVehicle === 'SEARCH' && (
+      {/* Режим ПОИСКА для Логиста */}
+      {authRole === 'ADMIN' && selectedVehicle === 'SEARCH' && (
         <div className="search-section">
           <div className="search-input-wrapper">
             <input
@@ -354,14 +481,15 @@ function App() {
         </div>
       )}
 
-      {selectedVehicle && selectedVehicle !== 'SEARCH' && (
+      {/* ОТОБРАЖЕНИЕ МАРШРУТА (И для водителя, и для выбранной машины логиста) */}
+      {activeVehicleKey && activeVehicleKey !== 'SEARCH' && (
         <div className="points-list">
           <h2>
             Маршрут:{' '}
-            {selectedVehicle === 'Без номера авто' ? (
+            {activeVehicleKey === 'Без номера авто' ? (
               'Без номера авто'
             ) : (
-              <span className="license-plate">{selectedVehicle}</span>
+              <span className="license-plate">{activeVehicleKey}</span>
             )}
           </h2>
 
@@ -386,7 +514,7 @@ function App() {
         </div>
       )}
 
-      {/* Модальное окно (карточка детальной информации) */}
+      {/* Модальное окно «Детально» */}
       {activeDetailsDoc && (
         <div className="modal-backdrop" style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -406,7 +534,6 @@ function App() {
               <div style={{ textAlign: 'center', padding: '30px', color: '#666' }}>Загрузка позиций...</div>
             ) : detailsData && detailsData.items && detailsData.items.length > 0 ? (
               <div>
-                {/* Общая информация из первой позиции */}
                 <div style={{ marginBottom: '15px', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '8px' }}>
                   <p style={{ margin: '4px 0' }}>👤 <strong>Отримувач:</strong> {detailsData.items[0].recipient}</p>
                   <p style={{ margin: '4px 0' }}>📍 <strong>Пункт доставки:</strong> {detailsData.items[0].delivery_point}</p>
@@ -419,7 +546,6 @@ function App() {
                       <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '4px' }}>{item.name}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#555' }}>
                         <span>Кол-во: <strong>{item.quantity} шт.</strong></span>
-                        {/* Выводим цену ТОЛЬКО для Pick-Up с наличным расчетом */}
                         {isCurrentDocPickupCash && (
                           <span style={{ color: '#28a745', fontWeight: 'bold' }}>{item.price} грн</span>
                         )}
@@ -428,7 +554,6 @@ function App() {
                   ))}
                 </div>
 
-                {/* Итоговая сумма отображается тоже только для наличных Pick-Up */}
                 {isCurrentDocPickupCash && (
                   <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '2px solid #eee', display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 'bold' }}>
                     <span>Итого к оплате наличными:</span>
