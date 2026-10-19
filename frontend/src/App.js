@@ -9,6 +9,11 @@ function App() {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Состояния для модального окна «Детально»
+  const [activeDetailsDoc, setActiveDetailsDoc] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsData, setDetailsData] = useState(null);
+
   const fetchData = () => {
     setLoading(true);
     fetch(`${API_URL}/api/routes-by-vehicle`, { cache: 'no-store' })
@@ -26,6 +31,30 @@ function App() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Функция запроса детальной информации по документу
+  const handleOpenDetails = (docNum) => {
+    if (!docNum) return;
+    setActiveDetailsDoc(docNum);
+    setDetailsLoading(true);
+    setDetailsData(null);
+
+    fetch(`${API_URL}/api/delivery-details/${docNum}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        setDetailsData(data);
+        setDetailsLoading(false);
+      })
+      .catch((err) => {
+        console.error('Ошибка загрузки деталей:', err);
+        setDetailsLoading(false);
+      });
+  };
+
+  const handleCloseDetails = () => {
+    setActiveDetailsDoc(null);
+    setDetailsData(null);
+  };
 
   const handleSelectVehicle = (vehicle) => {
     setSearchQuery('');
@@ -45,7 +74,6 @@ function App() {
         <div className="loader-box">
           <img src="/logo192.png" alt="VEGTAM" className="loader-logo" onError={(e) => { e.target.src = '/favicon.ico'; }} />
           
-          {/* Реалистичный спидометр с фоновым фото и анимированной стрелкой */}
           <div className="custom-speedometer">
             <img src="/speedometer-bg.jpg" alt="Speedometer" className="speedometer-img" />
             <div className="speedometer-real-needle"></div>
@@ -78,7 +106,6 @@ function App() {
         );
       });
 
-  // Вспомогательная функция для извлечения значений из полей карточки
   const getValFromPoint = (point, possibleNames) => {
     const keys = Object.keys(point).filter((k) => !k.startsWith('_'));
     for (const name of possibleNames) {
@@ -94,7 +121,6 @@ function App() {
     return '';
   };
 
-  // Функция сортировки точек маршрута по Коду БО
   const getSortedPoints = (pointsArray) => {
     if (!Array.isArray(pointsArray)) return [];
     
@@ -110,7 +136,6 @@ function App() {
     });
   };
 
-  // Вспомогательная функция парсинга числовых значений
   const parseNum = (strVal) => {
     if (!strVal) return 0;
     const cleaned = String(strVal).replace(',', '.').replace(/[^0-9.]/g, '');
@@ -118,7 +143,6 @@ function App() {
     return isNaN(num) ? 0 : num;
   };
 
-  // Подсчёт итоговых показателей
   const calculateTotals = (pointsArray) => {
     if (!Array.isArray(pointsArray)) return { count: 0, weight: 0, volume: 0 };
     
@@ -156,23 +180,17 @@ function App() {
     const payment = getValFromPoint(point, ['оплата']);
     const note = getValFromPoint(point, ['примітка', 'примечание', 'примитка']);
 
-    // Строгая проверка полей
     const noteLower = String(note).toLowerCase();
     const paymentLower = String(payment).toLowerCase();
 
-    // 1. Проверяем наличие Pick-Up
     const hasPickup = noteLower.includes('pick-up') || noteLower.includes('pickup');
-
-    // 2. Исключаем безнал, карты и б/готівка
     const isNonCash = paymentLower.includes('б/г') || 
                       paymentLower.includes('б/готівк') || 
                       paymentLower.includes('безгот') || 
                       paymentLower.includes('картк') || 
                       paymentLower.includes('карта');
 
-    // 3. Подтверждаем чистый наличный расчет
     const isCash = (paymentLower.includes('готівк') || paymentLower.includes('налич')) && !isNonCash;
-
     const isPickupCash = hasPickup && isCash;
 
     const addressParts = [city, street, house ? `д. ${house}` : ''].filter(Boolean);
@@ -216,7 +234,6 @@ function App() {
           <p>📦 <strong>Параметры:</strong> {weight ? `Вага: ${weight} кг` : ''} {volume ? `| Об'єм: ${volume} м³` : ''}</p>
         )}
 
-        {/* Вывод строки ТОЛЬКО для подсвеченных блоков Pick-Up + Cash */}
         {isPickupCash && (
           <p>💳 <strong>Оплата:</strong> {payment} {note ? `| Примітка: ${note}` : ''}</p>
         )}
@@ -229,16 +246,38 @@ function App() {
           <p>🏢 <strong>Код БО:</strong> {boCode}</p>
         )}
 
-        {fullAddress !== 'Адрес не указан' && (
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-map"
-          >
-            🗺️ Открыть карту
-          </a>
-        )}
+        <div className="card-actions" style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+          {fullAddress !== 'Адрес не указан' && (
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-map"
+              style={{ flex: 1, textAlign: 'center', textDecoration: 'none' }}
+            >
+              🗺️ Карта
+            </a>
+          )}
+
+          {docNum && (
+            <button
+              className="btn-details"
+              onClick={() => handleOpenDetails(docNum)}
+              style={{
+                flex: 1,
+                backgroundColor: '#007bff',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              📋 Детально
+            </button>
+          )}
+        </div>
       </div>
     );
   };
@@ -340,6 +379,70 @@ function App() {
           </div>
 
           {sortedCurrentPoints.map((point, idx) => renderCard(point, idx, false))}
+        </div>
+      )}
+
+      {/* Модальное окно (карточка детальной информации) */}
+      {activeDetailsDoc && (
+        <div className="modal-backdrop" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex',
+          justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px'
+        }}>
+          <div className="modal-content" style={{
+            backgroundColor: '#fff', borderRadius: '12px', width: '100%', maxWidth: '600px',
+            maxHeight: '90vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#333' }}>📦 Детали документа № {activeDetailsDoc}</h3>
+              <button onClick={handleCloseDetails} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#666' }}>✖</button>
+            </div>
+
+            {detailsLoading ? (
+              <div style={{ textAlign: 'center', padding: '30px', color: '#666' }}>Загрузка позиций...</div>
+            ) : detailsData && detailsData.items && detailsData.items.length > 0 ? (
+              <div>
+                {/* Общая информация из первой позиции */}
+                <div style={{ marginBottom: '15px', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '8px' }}>
+                  <p style={{ margin: '4px 0' }}>👤 <strong>Отримувач:</strong> {detailsData.items[0].recipient}</p>
+                  <p style={{ margin: '4px 0' }}>📍 <strong>Пункт доставки:</strong> {detailsData.items[0].delivery_point}</p>
+                </div>
+
+                <h4 style={{ margin: '15px 0 10px 0' }}>Товары в заказе:</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {detailsData.items.map((item, i) => (
+                    <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px', backgroundColor: '#fff' }}>
+                      <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '4px' }}>{item.name}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#555' }}>
+                        <span>Кол-во: <strong>{item.quantity} шт.</strong></span>
+                        <span style={{ color: '#28a745', fontWeight: 'bold' }}>{item.price} грн</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Подсчет общей суммы */}
+                <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '2px solid #eee', display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 'bold' }}>
+                  <span>Итого сумма:</span>
+                  <span style={{ color: '#28a745' }}>
+                    {detailsData.items.reduce((sum, item) => sum + parseNum(item.price), 0)} грн
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>Товары не найдены для данного документа.</div>
+            )}
+
+            <button 
+              onClick={handleCloseDetails}
+              style={{
+                width: '100%', marginTop: '20px', padding: '12px', backgroundColor: '#6c757d',
+                color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
+              Закрыть
+            </button>
+          </div>
         </div>
       )}
     </div>
