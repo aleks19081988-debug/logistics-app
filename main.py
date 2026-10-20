@@ -4,7 +4,6 @@ import pandas as pd
 import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
 app = FastAPI(title="Logistics App API")
 
@@ -18,7 +17,7 @@ app.add_middleware(
 
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1nGRnER-mQj81NugFTaR1rBP87w8a00riPXBFqZDU1dI/edit?gid=0#gid=0"
 DETAILS_GID = "1361088490"
-# Webhook URL Google Apps Script для записи в архив
+ARCHIVE_GID = "89786043"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDzUce63R419DyS9aQflRkHFvfrTd_-gtZ9MchVZkqAOIrEt6I4VtBqQnY_4gegspmCg/exec"
 
 
@@ -87,7 +86,6 @@ def get_routes_by_vehicle():
         if vehicle_key not in grouped:
             grouped[vehicle_key] = []
         
-        row["calculated_distance"] = None
         grouped[vehicle_key].append(row)
 
     return grouped
@@ -126,16 +124,39 @@ def get_delivery_details(doc_id: str):
     }
 
 
+@app.get("/api/search-archive/{query}")
+def search_archive(query: str):
+    """Поиск документов в листе 'Архив' по номеру документа, авто или дате"""
+    archive_data = get_sheet_data(gid=ARCHIVE_GID)
+    if not archive_data:
+        return {"results": []}
+
+    clean_query = query.strip().lower()
+    matched = []
+
+    for row in archive_data:
+        row_str = " ".join([str(v).lower() for v in row.values()])
+        if clean_query in row_str:
+            matched.append({
+                "date": row.get("Дата", ""),
+                "doc_num": str(row.get("№ док-ту", "")).replace(".0", ""),
+                "driver": row.get("Водій / Авто", ""),
+                "from": row.get("Звідки", ""),
+                "to": row.get("Куди", ""),
+                "items": row.get("Товар", "")
+            })
+
+    return {"results": matched}
+
+
 @app.post("/api/archive-day")
 def archive_current_day():
-    """Собирает свернутые данные дня и отправляет их в лист 'Архив'"""
     routes_data = get_sheet_data(gid="0")
     details_data = get_sheet_data(gid=DETAILS_GID)
 
     if not routes_data:
         return {"status": "error", "message": "Маршруты не найдены"}
 
-    # Группируем детали по номеру документа
     details_by_doc = {}
     for item in details_data:
         doc = str(item.get("№ док-ту", "")).strip()
@@ -169,12 +190,9 @@ def archive_current_day():
         house = get_val_from_row(row, ['№ будинку', 'будинок', 'дом'])
         destination = ", ".join(filter(None, [city, street, f"д. {house}" if house else ""]))
 
-        # Склеиваем товары в компактную строку
         items_list = details_by_doc.get(doc_num, [])
         items_summary = "; ".join(items_list) if items_list else "—"
 
-        # Структура строки для листа "Архив":
-        # [Дата, № док-ту, Водій/Авто, Звідки, Куди, Товар]
         archive_rows.append([
             today_str,
             doc_num,
@@ -187,7 +205,6 @@ def archive_current_day():
     if not archive_rows:
         return {"status": "error", "message": "Нет валидных записей для архивации"}
 
-    # Отправляем массивы строк в Google Apps Script
     try:
         res = requests.post(APPS_SCRIPT_URL, json={"rows": archive_rows}, timeout=15)
         return {"status": "success", "archived_count": len(archive_rows), "script_response": res.json()}

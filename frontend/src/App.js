@@ -10,13 +10,15 @@ function App() {
 
   // Авторизация
   const [loginInput, setLoginInput] = useState('');
-  const [authRole, setAuthRole] = useState(null); // 'DRIVER' или 'ADMIN'
+  const [authRole, setAuthRole] = useState(null);
   const [assignedVehicle, setAssignedVehicle] = useState(null);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [loginError, setLoginError] = useState('');
 
   // Поиск и Архив
   const [searchQuery, setSearchQuery] = useState('');
+  const [archiveResults, setArchiveResults] = useState([]);
+  const [searchingArchive, setSearchingArchive] = useState(false);
   const [archiving, setArchiving] = useState(false);
 
   // Модалка деталей
@@ -37,6 +39,25 @@ function App() {
     }
     fetchData();
   }, []);
+
+  // Автоматический поиск по Архиву при вводе в строке поиска
+  useEffect(() => {
+    if (selectedVehicle === 'SEARCH' && searchQuery.trim().length >= 3) {
+      setSearchingArchive(true);
+      fetch(`${API_URL}/api/search-archive/${encodeURIComponent(searchQuery.trim())}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setArchiveResults(data.results || []);
+          setSearchingArchive(false);
+        })
+        .catch((err) => {
+          console.error('Ошибка поиска в архиве:', err);
+          setSearchingArchive(false);
+        });
+    } else {
+      setArchiveResults([]);
+    }
+  }, [searchQuery, selectedVehicle]);
 
   const fetchData = () => {
     setLoading(true);
@@ -95,7 +116,6 @@ function App() {
     localStorage.removeItem('vegtam_vehicle');
   };
 
-  // Вызов архивации дня
   const handleArchiveDay = () => {
     if (!window.confirm("Вы уверены, что хотите отправить текущий день в Архив в Google Таблице?")) {
       return;
@@ -145,6 +165,7 @@ function App() {
 
   const handleSelectVehicle = (vehicle) => {
     setSearchQuery('');
+    setArchiveResults([]);
     if (selectedVehicle === vehicle) {
       setSelectedVehicle(null);
     } else {
@@ -489,7 +510,7 @@ function App() {
             {searchQuery && (
               <button 
                 className="btn-clear-search" 
-                onClick={() => setSearchQuery('')}
+                onClick={() => { setSearchQuery(''); setArchiveResults([]); }}
                 aria-label="Очистить поиск"
               >
                 ✖
@@ -498,11 +519,39 @@ function App() {
           </div>
 
           <div className="points-list">
-            {searchQuery.trim() !== '' && filteredPoints.length === 0 && (
-              <div className="no-results">Ничего не найдено по запросу "{searchQuery}"</div>
+            {/* Сегодняшние маршруты */}
+            {filteredPoints.map((point, idx) => renderCard(point, idx, true))}
+
+            {/* Результаты из Архива */}
+            {searchingArchive && (
+              <div style={{ textAlign: 'center', color: '#666', padding: '15px' }}>🔍 Поиск в архиве...</div>
             )}
 
-            {filteredPoints.map((point, idx) => renderCard(point, idx, true))}
+            {archiveResults.length > 0 && (
+              <div style={{ marginTop: '20px' }}>
+                <h3 style={{ color: '#fd7e14', borderBottom: '2px solid #fd7e14', paddingBottom: '5px' }}>
+                  📁 Найдено в Архиве ({archiveResults.length})
+                </h3>
+                {archiveResults.map((item, idx) => (
+                  <div key={idx} style={{ backgroundColor: '#fff3cd', border: '1px solid #ffeeba', borderRadius: '10px', padding: '15px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontWeight: 'bold', color: '#856404' }}>
+                      <span>📅 Дата: {item.date}</span>
+                      <span>📄 Док: {item.doc_num}</span>
+                    </div>
+                    <p style={{ margin: '4px 0' }}>🚗 <strong>Водитель / Авто:</strong> {item.driver}</p>
+                    <p style={{ margin: '4px 0' }}>🏭 <strong>Откуда:</strong> {item.from}</p>
+                    <p style={{ margin: '4px 0' }}>📍 <strong>Куда:</strong> {item.to}</p>
+                    <p style={{ margin: '8px 0 0 0', backgroundColor: '#fff', padding: '8px', borderRadius: '6px', fontSize: '13px', color: '#333' }}>
+                      📦 <strong>Товары:</strong> {item.items}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {searchQuery.trim() !== '' && filteredPoints.length === 0 && archiveResults.length === 0 && !searchingArchive && (
+              <div className="no-results">Ничего не найдено в маршрутах на сегодня и в Архиве по запросу "{searchQuery}"</div>
+            )}
           </div>
         </div>
       )}
