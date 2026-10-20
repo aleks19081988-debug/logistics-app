@@ -15,11 +15,12 @@ function App() {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [loginError, setLoginError] = useState('');
 
-  // Поиск и Архив
+  // Поиск, Архив и Рассылка
   const [searchQuery, setSearchQuery] = useState('');
   const [archiveResults, setArchiveResults] = useState([]);
   const [searchingArchive, setSearchingArchive] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [notifying, setNotifying] = useState(false);
 
   // Модалка деталей
   const [activeDetailsDoc, setActiveDetailsDoc] = useState(null);
@@ -134,6 +135,28 @@ function App() {
       })
       .catch((err) => {
         setArchiving(false);
+        alert(`Ошибка подключения к серверу: ${err.message}`);
+      });
+  };
+
+  const handleNotifyDrivers = () => {
+    if (!window.confirm("Разослать сегодняшний маршрут экипажам в Telegram?")) {
+      return;
+    }
+
+    setNotifying(true);
+    fetch(`${API_URL}/api/notify-drivers`, { method: 'POST' })
+      .then((res) => res.json())
+      .then((res) => {
+        setNotifying(false);
+        if (res.status === 'success') {
+          alert(`Успешно! Найдено экипажей: ${res.found_crews}. Отправлено сообщений: ${res.notified_users}`);
+        } else {
+          alert(`Ошибка рассылки: ${res.message || 'Неизвестная ошибка'}`);
+        }
+      })
+      .catch((err) => {
+        setNotifying(false);
         alert(`Ошибка подключения к серверу: ${err.message}`);
       });
   };
@@ -446,18 +469,30 @@ function App() {
           <img src="/logo192.png" alt="Icon" className="header-app-icon" onError={(e) => { e.target.src = '/favicon.ico'; }} />
           VEGTAM
         </h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           {authRole === 'ADMIN' && (
-            <button
-              onClick={handleArchiveDay}
-              disabled={archiving}
-              style={{
-                backgroundColor: '#fd7e14', color: '#fff', border: 'none', borderRadius: '6px',
-                padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
-              }}
-            >
-              {archiving ? '⏳ Запись...' : '📁 В архив'}
-            </button>
+            <>
+              <button
+                onClick={handleArchiveDay}
+                disabled={archiving}
+                style={{
+                  backgroundColor: '#fd7e14', color: '#fff', border: 'none', borderRadius: '6px',
+                  padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
+                }}
+              >
+                {archiving ? '⏳ Запись...' : '📁 В архив'}
+              </button>
+              <button
+                onClick={handleNotifyDrivers}
+                disabled={notifying}
+                style={{
+                  backgroundColor: '#17a2b8', color: '#fff', border: 'none', borderRadius: '6px',
+                  padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
+                }}
+              >
+                {notifying ? '⏳ Отправка...' : '📢 Оповестить'}
+              </button>
+            </>
           )}
           <button 
             onClick={handleLogout}
