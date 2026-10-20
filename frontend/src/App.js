@@ -2,29 +2,29 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 
 const API_URL = 'https://logistics-backend-3vj1.onrender.com';
-const ADMIN_PIN = '0000'; // Пароль для доступа логиста ко всем машинам
+const ADMIN_PIN = '0000';
 
 function App() {
   const [routes, setRoutes] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Авторизация и доступ
+  // Авторизация
   const [loginInput, setLoginInput] = useState('');
   const [authRole, setAuthRole] = useState(null); // 'DRIVER' или 'ADMIN'
-  const [assignedVehicle, setAssignedVehicle] = useState(null); // Для водителя
-  const [selectedVehicle, setSelectedVehicle] = useState(null); // Для админа
+  const [assignedVehicle, setAssignedVehicle] = useState(null);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [loginError, setLoginError] = useState('');
 
-  // Поиск (для логиста)
+  // Поиск и Архив
   const [searchQuery, setSearchQuery] = useState('');
+  const [archiving, setArchiving] = useState(false);
 
-  // Состояния для модального окна «Детально»
+  // Модалка деталей
   const [activeDetailsDoc, setActiveDetailsDoc] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsData, setDetailsData] = useState(null);
   const [isCurrentDocPickupCash, setIsCurrentDocPickupCash] = useState(false);
 
-  // При загрузке проверяем, не был ли выполнен вход ранее
   useEffect(() => {
     const savedRole = localStorage.getItem('vegtam_role');
     const savedVehicle = localStorage.getItem('vegtam_vehicle');
@@ -52,7 +52,6 @@ function App() {
       });
   };
 
-  // Логика входа в приложение
   const handleLogin = (e) => {
     e.preventDefault();
     setLoginError('');
@@ -63,7 +62,6 @@ function App() {
       return;
     }
 
-    // Вход для логиста по PIN-коду
     if (query === ADMIN_PIN) {
       setAuthRole('ADMIN');
       localStorage.setItem('vegtam_role', 'ADMIN');
@@ -73,7 +71,6 @@ function App() {
       return;
     }
 
-    // Ищем совпадение номера авто в загруженных маршрутах
     const vehicles = Object.keys(routes);
     const matchedVehicle = vehicles.find((v) => 
       v.toLowerCase().includes(query) || query.includes(v.toLowerCase().replace(/\s+/g, ''))
@@ -96,6 +93,29 @@ function App() {
     setLoginInput('');
     localStorage.removeItem('vegtam_role');
     localStorage.removeItem('vegtam_vehicle');
+  };
+
+  // Вызов архивации дня
+  const handleArchiveDay = () => {
+    if (!window.confirm("Вы уверены, что хотите отправить текущий день в Архив в Google Таблице?")) {
+      return;
+    }
+
+    setArchiving(true);
+    fetch(`${API_URL}/api/archive-day`, { method: 'POST' })
+      .then((res) => res.json())
+      .then((res) => {
+        setArchiving(false);
+        if (res.status === 'success') {
+          alert(`Успешно! Добавлено записей в архив: ${res.archived_count}`);
+        } else {
+          alert(`Ошибка архивации: ${res.message || 'Неизвестная ошибка'}`);
+        }
+      })
+      .catch((err) => {
+        setArchiving(false);
+        alert(`Ошибка подключения к серверу: ${err.message}`);
+      });
   };
 
   const handleOpenDetails = (docNum, isPickupCash) => {
@@ -151,7 +171,6 @@ function App() {
     );
   }
 
-  // ЭКРАН АВТОРИЗАЦИИ
   if (!authRole) {
     return (
       <div className="container notranslate" translate="no" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
@@ -406,15 +425,29 @@ function App() {
           <img src="/logo192.png" alt="Icon" className="header-app-icon" onError={(e) => { e.target.src = '/favicon.ico'; }} />
           VEGTAM
         </h1>
-        <button 
-          onClick={handleLogout}
-          style={{
-            backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '6px',
-            padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
-          }}
-        >
-          🚪 Выйти
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {authRole === 'ADMIN' && (
+            <button
+              onClick={handleArchiveDay}
+              disabled={archiving}
+              style={{
+                backgroundColor: '#fd7e14', color: '#fff', border: 'none', borderRadius: '6px',
+                padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
+              {archiving ? '⏳ Запись...' : '📁 В архив'}
+            </button>
+          )}
+          <button 
+            onClick={handleLogout}
+            style={{
+              backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '6px',
+              padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
+            }}
+          >
+            🚪 Выйти
+          </button>
+        </div>
       </header>
 
       {authRole === 'ADMIN' && (
