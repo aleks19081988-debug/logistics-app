@@ -49,11 +49,13 @@ def send_telegram_message(chat_id: int, text: str):
 def get_sheet_data(gid="0", spreadsheet_id=None):
     try:
         sheet_id = spreadsheet_id if spreadsheet_id else SPREADSHEET_URL.split("/d/")[1].split("/")[0]
-        export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&id={sheet_id}&gid={gid}"
+        # Используем gviz API для стабильного чтения открытых по ссылке таблиц без публикации в вебе
+        export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={gid}"
         response = requests.get(export_url, timeout=10)
         response.encoding = "utf-8"
 
         if response.status_code != 200:
+            print(f"❌ Ошибка HTTP {response.status_code} при чтении таблицы {sheet_id}")
             return []
 
         df = pd.read_csv(io.StringIO(response.text), header=None)
@@ -64,10 +66,10 @@ def get_sheet_data(gid="0", spreadsheet_id=None):
         return []
 
 
-def get_sheet_data_dict(gid="0"):
+def get_sheet_data_dict(gid="0", spreadsheet_id=None):
     try:
-        sheet_id = SPREADSHEET_URL.split("/d/")[1].split("/")[0]
-        export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&id={sheet_id}&gid={gid}"
+        sheet_id = spreadsheet_id if spreadsheet_id else SPREADSHEET_URL.split("/d/")[1].split("/")[0]
+        export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={gid}"
         response = requests.get(export_url, timeout=10)
         response.encoding = "utf-8"
 
@@ -78,7 +80,7 @@ def get_sheet_data_dict(gid="0"):
         df = df.fillna("")
         return df.to_dict(orient="records")
     except Exception as e:
-        print(f"❌ Ошибка чтения таблицы (gid: {gid}):", e)
+        print(f"❌ Ошибка чтения таблицы словарем (gid: {gid}):", e)
         return []
 
 
@@ -286,7 +288,7 @@ async def telegram_webhook(request: Request):
 
 @app.post("/api/notify-drivers")
 def notify_drivers():
-    """Считывает Графік КД (с указанным GID) и отправляет уведомления экипажам на сегодня"""
+    """Считывает Графік КД (через gviz) и отправляет уведомления экипажам на сегодня"""
     try:
         raw_schedule = get_sheet_data(gid=SCHEDULE_GID, spreadsheet_id=SCHEDULE_SPREADSHEET_ID)
         if not raw_schedule:
