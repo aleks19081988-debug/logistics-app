@@ -15,14 +15,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Основная таблица маршрутов и детали
+# Основная таблица (Заявки, Детали, Архив и теперь График КД)
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1nGRnER-mQj81NugFTaR1rBP87w8a00riPXBFqZDU1dI/edit?gid=0#gid=0"
 DETAILS_GID = "1361088490"
 ARCHIVE_GID = "89786043"
 
-# Внешняя таблица с Графиком КД и её правильный GID
-SCHEDULE_SPREADSHEET_ID = "1zQ-CmoSIS3l0INqEzZBsif6RDxZ8bhIOTwIrnt9pFaAA"
-SCHEDULE_GID = "1977056405"
+# Новая вкладка «Графік КД» внутри вашей основной таблицы
+SCHEDULE_GID = "1663850532"
 
 # Telegram Bot Token & Google Apps Script
 TELEGRAM_BOT_TOKEN = "8981440107:AAGVTEmTGsk5j0_paOxxUa0EuWwQY_pSvIc"
@@ -49,13 +48,11 @@ def send_telegram_message(chat_id: int, text: str):
 def get_sheet_data(gid="0", spreadsheet_id=None):
     try:
         sheet_id = spreadsheet_id if spreadsheet_id else SPREADSHEET_URL.split("/d/")[1].split("/")[0]
-        # Используем gviz API для стабильного чтения открытых по ссылке таблиц без публикации в вебе
         export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={gid}"
         response = requests.get(export_url, timeout=10)
         response.encoding = "utf-8"
 
         if response.status_code != 200:
-            print(f"❌ Ошибка HTTP {response.status_code} при чтении таблицы {sheet_id}")
             return []
 
         df = pd.read_csv(io.StringIO(response.text), header=None)
@@ -274,7 +271,7 @@ async def telegram_webhook(request: Request):
         if text.startswith("/start"):
             send_telegram_message(
                 chat_id,
-                "<b>Вітаємо у VEGTAM LOGISTICS BOT!</b> 🚚\n\nБудь ласка, введіть ваше <b>Прізвище</b> (як у графіку екіпажів, наприклад: <code>Ващук</code>), щоб отримувати сповіщення про маршрути."
+                "<b>Вітаємо у VEGTAM LOGISTICS BOT!</b> 🚚\n\nБудь ласка, введіть ваше <b>Прізвище</b> (як у графіку екіпажів, наприклад: <code>Кравченко</code>), щоб отримувати сповіщення про маршрути."
             )
         else:
             surname_clean = text.lower()
@@ -288,28 +285,27 @@ async def telegram_webhook(request: Request):
 
 @app.post("/api/notify-drivers")
 def notify_drivers():
-    """Считывает Графік КД (через gviz) и отправляет уведомления экипажам на сегодня"""
+    """Считывает вкладку 'Графік КД' из основной таблицы и отправляет уведомления"""
     try:
-        raw_schedule = get_sheet_data(gid=SCHEDULE_GID, spreadsheet_id=SCHEDULE_SPREADSHEET_ID)
+        raw_schedule = get_sheet_data(gid=SCHEDULE_GID)
         if not raw_schedule:
-            return {"status": "error", "message": "Не удалось подключиться к таблице 'Графік КД'"}
+            return {"status": "error", "message": "Не удалось подключиться к вкладке 'Графік КД'"}
 
         crews_today = []
         
-        for row in raw_schedule:
-            for i in range(len(row)):
-                cell = str(row[i]).strip()
-                if any(cell.startswith(prefix) for prefix in ["AA", "AI", "KA", "BK"]):
-                    vehicle_no = cell
-                    driver = str(row[i+1]).strip() if i + 1 < len(row) else ""
-                    expeditor = str(row[i+2]).strip() if i + 2 < len(row) else ""
-                    
-                    if driver or expeditor:
-                        crews_today.append({
-                            "vehicle": vehicle_no,
-                            "driver": driver,
-                            "expeditor": expeditor
-                        })
+        # Пропускаем заголовок (строка 0), читаем начиная со строки 1 (где машины и водители)
+        for row in raw_schedule[1:]:
+            if len(row) > 2:
+                vehicle_no = str(row[1]).strip()  рисунок: столбец B (индекс 1) - Авто[cite: 7]
+                driver = str(row[2]).strip()      # столбец C (индекс 2) - Водій[cite: 7]
+                expeditor = str(row[3]).strip() if len(row) > 3 else "" # столбец D (индекс 3) - Експедитор[cite: 7]
+
+                if vehicle_no and (driver or expeditor):
+                    crews_today.append({
+                        "vehicle": vehicle_no,
+                        "driver": driver,
+                        "expeditor": expeditor
+                    })
 
         if not crews_today:
             return {"status": "error", "message": "В графике не найдены экипажи на сегодня"}
