@@ -24,7 +24,7 @@ STAFF_GID = "2037633890"  # Вкладка для сотрудников
 
 # Telegram Bot Token & Google Apps Script
 TELEGRAM_BOT_TOKEN = "8981440107:AAGVTEmTGsk5j0_paOxxUa0EuWwQY_pSvIc"
-APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDzUce63R419DyS9aQflRkHFvfrTd_-gtZ9MchVZkqAOIrEt6I4VtBqQnY_4gegspmCg/exec"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfDrODP-KZfPQaBJIEIQm4hDoF2LTCOKS66527JcxMfM1-M00qHXo0RRnw5NhsPtLCyg/exec"
 
 
 def send_telegram_message(chat_id: int, text: str):
