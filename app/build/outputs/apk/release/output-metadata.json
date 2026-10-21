@@ -4,15 +4,15 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "app.vercel.logistics_app_livid.twa",
+  "applicationId": "com.vegtam.logistics",
   "variantName": "release",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 2,
-      "versionName": "2",
+      "versionCode": 3,
+      "versionName": "3",
       "outputFile": "app-release-unsigned.apk"
     }
   ],

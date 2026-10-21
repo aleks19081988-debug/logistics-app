@@ -22,9 +22,9 @@
      the abbreviated format.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="app.vercel.logistics_app_livid.twa"
-    android:versionCode="2"
-    android:versionName="2" >
+    package="com.vegtam.logistics"
+    android:versionCode="3"
+    android:versionName="3" >
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -43,13 +43,13 @@
     </queries>
 
     <permission
-        android:name="app.vercel.logistics_app_livid.twa.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:name="com.vegtam.logistics.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         android:protectionLevel="signature" />
 
-    <uses-permission android:name="app.vercel.logistics_app_livid.twa.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+    <uses-permission android:name="com.vegtam.logistics.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 
     <application
-        android:name="app.vercel.logistics_app_livid.twa.Application"
+        android:name="com.vegtam.logistics.Application"
         android:allowBackup="true"
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:extractNativeLibs="false"
@@ -84,7 +84,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="app.vercel.logistics_app_livid.twa.LauncherActivity"
+            android:name="com.vegtam.logistics.LauncherActivity"
             android:alwaysRetainTaskState="true"
             android:exported="true"
             android:label="@string/launcherName" >
@@ -163,7 +163,7 @@
         </provider>
 
         <service
-            android:name="app.vercel.logistics_app_livid.twa.DelegationService"
+            android:name="com.vegtam.logistics.DelegationService"
             android:enabled="@bool/enableNotification"
             android:exported="@bool/enableNotification" >
             <meta-data
@@ -201,7 +201,7 @@
 
         <provider
             android:name="androidx.startup.InitializationProvider"
-            android:authorities="app.vercel.logistics_app_livid.twa.androidx-startup"
+            android:authorities="com.vegtam.logistics.androidx-startup"
             android:exported="false" >
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"

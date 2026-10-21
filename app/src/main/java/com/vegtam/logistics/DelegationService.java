@@ -1,4 +1,4 @@
-package app.vercel.logistics_app_livid.twa;
+package com.vegtam.logistics;
 
 
 

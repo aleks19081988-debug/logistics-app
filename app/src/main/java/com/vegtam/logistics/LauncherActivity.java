@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package app.vercel.logistics_app_livid.twa;
+package com.vegtam.logistics;
 
 import android.content.pm.ActivityInfo;
 import android.net.Uri;

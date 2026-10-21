@@ -7942,15 +7942,6 @@ androidx.viewpager.widget.ViewPager$SavedState
 androidx.viewpager.widget.ViewPager$SimpleOnPageChangeListener
 androidx.viewpager.widget.ViewPager$ViewPositionComparator
 androidx.viewpager.widget.ViewPager
-app.vercel.logistics_app_livid.twa.R$bool
-app.vercel.logistics_app_livid.twa.R$color
-app.vercel.logistics_app_livid.twa.R$drawable
-app.vercel.logistics_app_livid.twa.R$integer
-app.vercel.logistics_app_livid.twa.R$mipmap
-app.vercel.logistics_app_livid.twa.R$raw
-app.vercel.logistics_app_livid.twa.R$string
-app.vercel.logistics_app_livid.twa.R$xml
-app.vercel.logistics_app_livid.twa.R
 com.google.androidbrowserhelper.BuildConfig
 com.google.androidbrowserhelper.R$drawable:
     private void <init>()
@@ -10577,6 +10568,15 @@ com.google.j2objc.annotations.WeakOuter
 com.google.thirdparty.publicsuffix.PublicSuffixPatterns
 com.google.thirdparty.publicsuffix.PublicSuffixType
 com.google.thirdparty.publicsuffix.TrieParser
+com.vegtam.logistics.R$bool
+com.vegtam.logistics.R$color
+com.vegtam.logistics.R$drawable
+com.vegtam.logistics.R$integer
+com.vegtam.logistics.R$mipmap
+com.vegtam.logistics.R$raw
+com.vegtam.logistics.R$string
+com.vegtam.logistics.R$xml
+com.vegtam.logistics.R
 kotlin.ArrayIntrinsicsKt
 kotlin.BuilderInference
 kotlin.CharCodeJVMKt

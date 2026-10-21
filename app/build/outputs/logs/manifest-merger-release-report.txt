@@ -37,7 +37,7 @@ MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/codespace/.gradle/cach
 MERGED from [androidx.annotation:annotation-experimental:1.4.1] /home/codespace/.gradle/caches/8.11.1/transforms/7880efad619dc72d569f5e6e2c17444b/transformed/annotation-experimental-1.4.1/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.core:core-viewtree:1.0.0] /home/codespace/.gradle/caches/8.11.1/transforms/6599d560de56b1fb53ace8167d44c006/transformed/core-viewtree-1.0.0/AndroidManifest.xml:2:1-7:12
 	package
-		ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:23:5-49
+		ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:23:5-35
 		INJECTED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml
 	android:versionName
 		INJECTED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml
@@ -128,7 +128,7 @@ category#android.intent.category.DEFAULT
 ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:74:21-80
 	android:name
 		ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:74:31-77
-activity#app.vercel.logistics_app_livid.twa.LauncherActivity
+activity#com.vegtam.logistics.LauncherActivity
 ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:79:9-160:20
 	android:label
 		ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:81:13-49
@@ -276,7 +276,7 @@ ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:172:13-174
 		ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:174:17-50
 	android:name
 		ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:173:17-67
-service#app.vercel.logistics_app_livid.twa.DelegationService
+service#com.vegtam.logistics.DelegationService
 ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:177:9-192:19
 	android:enabled
 		ADDED from /workspaces/logistics-app/app/src/main/AndroidManifest.xml:179:13-55
@@ -430,7 +430,7 @@ ADDED from [androidx.core:core:1.17.0] /home/codespace/.gradle/caches/8.11.1/tra
 		ADDED from [androidx.core:core:1.17.0] /home/codespace/.gradle/caches/8.11.1/transforms/1cdcdc1afd1ba58bdf96faeeac79f5ae/transformed/core-1.17.0/AndroidManifest.xml:24:9-44
 	android:name
 		ADDED from [androidx.core:core:1.17.0] /home/codespace/.gradle/caches/8.11.1/transforms/1cdcdc1afd1ba58bdf96faeeac79f5ae/transformed/core-1.17.0/AndroidManifest.xml:23:9-81
-permission#app.vercel.logistics_app_livid.twa.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+permission#com.vegtam.logistics.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.17.0] /home/codespace/.gradle/caches/8.11.1/transforms/1cdcdc1afd1ba58bdf96faeeac79f5ae/transformed/core-1.17.0/AndroidManifest.xml:22:5-24:47
 	android:protectionLevel
 		ADDED from [androidx.core:core:1.17.0] /home/codespace/.gradle/caches/8.11.1/transforms/1cdcdc1afd1ba58bdf96faeeac79f5ae/transformed/core-1.17.0/AndroidManifest.xml:24:9-44
@@ -440,7 +440,7 @@ uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.17.0] /home/codespace/.gradle/caches/8.11.1/transforms/1cdcdc1afd1ba58bdf96faeeac79f5ae/transformed/core-1.17.0/AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.17.0] /home/codespace/.gradle/caches/8.11.1/transforms/1cdcdc1afd1ba58bdf96faeeac79f5ae/transformed/core-1.17.0/AndroidManifest.xml:26:22-94
-uses-permission#app.vercel.logistics_app_livid.twa.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+uses-permission#com.vegtam.logistics.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.17.0] /home/codespace/.gradle/caches/8.11.1/transforms/1cdcdc1afd1ba58bdf96faeeac79f5ae/transformed/core-1.17.0/AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.17.0] /home/codespace/.gradle/caches/8.11.1/transforms/1cdcdc1afd1ba58bdf96faeeac79f5ae/transformed/core-1.17.0/AndroidManifest.xml:26:22-94

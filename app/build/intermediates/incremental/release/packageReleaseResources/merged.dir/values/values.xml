@@ -29,6 +29,6 @@
     <string name="launchUrl" translatable="false">https://logistics-app-livid.vercel.app/</string>
     <string name="launcherName" translatable="false">VEGTAM</string>
     <string name="orientation" translatable="false">portrait</string>
-    <string name="providerAuthority" translatable="false">app.vercel.logistics_app_livid.twa.fileprovider</string>
+    <string name="providerAuthority" translatable="false">com.vegtam.logistics.fileprovider</string>
     <string name="webManifestUrl" translatable="false">https://logistics-app-livid.vercel.app/manifest.json</string>
 </resources>

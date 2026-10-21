@@ -15,19 +15,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Основная таблица (Заявки, Детали, Архив и теперь График КД)
+# Основная таблица маршрутов, деталей, архива и нового Графика КД
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1nGRnER-mQj81NugFTaR1rBP87w8a00riPXBFqZDU1dI/edit?gid=0#gid=0"
 DETAILS_GID = "1361088490"
 ARCHIVE_GID = "89786043"
 
-# Новая вкладка «Графік КД» внутри вашей основной таблицы
+# Внутренняя вкладка «Графік КД»
 SCHEDULE_GID = "1663850532"
 
 # Telegram Bot Token & Google Apps Script
 TELEGRAM_BOT_TOKEN = "8981440107:AAGVTEmTGsk5j0_paOxxUa0EuWwQY_pSvIc"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDzUce63R419DyS9aQflRkHFvfrTd_-gtZ9MchVZkqAOIrEt6I4VtBqQnY_4gegspmCg/exec"
 
-# База Telegram-подписок пользователей (ключ: surname_lower, значение: chat_id)
+# База Telegram-подписок пользователей (ключ: text_lower, значение: chat_id)
 TELEGRAM_USERS = {}
 
 
@@ -271,21 +271,21 @@ async def telegram_webhook(request: Request):
         if text.startswith("/start"):
             send_telegram_message(
                 chat_id,
-                "<b>Вітаємо у VEGTAM LOGISTICS BOT!</b> 🚚\n\nБудь ласка, введіть ваше <b>Прізвище</b> (як у графіку екіпажів, наприклад: <code>Кравченко</code>), щоб отримувати сповіщення про маршрути."
+                "<b>Вітаємо у VEGTAM LOGISTICS BOT!</b> 🚚\n\nБудь ласка, введіть ваші <b>Прізвище</b> або дані (наприклад: <code>Кравченко</code>), щоб отримувати сповіщення про маршрути."
             )
         else:
-            surname_clean = text.lower()
-            TELEGRAM_USERS[surname_clean] = chat_id
+            text_clean = text.lower()
+            TELEGRAM_USERS[text_clean] = chat_id
             send_telegram_message(
                 chat_id,
-                f"✅ Дякуємо! Ваше прізвище <b>{text.title()}</b> успішно прив'язано до цього акаунту.\n\nВи будете отримувати сповіщення при кожній розсилці маршруту!"
+                f"✅ Дякуємо! Дані <b>{text.title()}</b> успішно прив'язано до цього акаунту.\n\nВи будете отримувати сповіщення при кожній розсилці маршруту!"
             )
     return {"status": "ok"}
 
 
 @app.post("/api/notify-drivers")
 def notify_drivers():
-    """Считывает вкладку 'Графік КД' из основной таблицы и отправляет уведомления"""
+    """Считывает вкладку 'Графік КД' и рассылает уведомления экипажам с гибким сопоставлением"""
     try:
         raw_schedule = get_sheet_data(gid=SCHEDULE_GID)
         if not raw_schedule:
@@ -293,12 +293,12 @@ def notify_drivers():
 
         crews_today = []
         
-        # Пропускаем заголовок (строка 0), читаем начиная со строки 1 (где машины и водители)
+        # Проходим по строкам графика (начиная со строки 1, пропуская шапку)
         for row in raw_schedule[1:]:
             if len(row) > 2:
-                vehicle_no = str(row[1]).strip()  рисунок: столбец B (индекс 1) - Авто[cite: 7]
-                driver = str(row[2]).strip()      # столбец C (индекс 2) - Водій[cite: 7]
-                expeditor = str(row[3]).strip() if len(row) > 3 else "" # столбец D (индекс 3) - Експедитор[cite: 7]
+                vehicle_no = str(row[1]).strip() if len(row) > 1 else ""  # Колонка B (Авто)[cite: 7]
+                driver = str(row[2]).strip() if len(row) > 2 else ""      # Колонка C (Водій)[cite: 7]
+                expeditor = str(row[3]).strip() if len(row) > 3 else ""   # Колонка D (Експедитор)[cite: 7]
 
                 if vehicle_no and (driver or expeditor):
                     crews_today.append({
@@ -315,8 +315,8 @@ def notify_drivers():
 
         for crew in crews_today:
             v_num = crew["vehicle"]
-            driver_surname = crew["driver"].lower()
-            expeditor_surname = crew["expeditor"].lower()
+            driver_str = crew["driver"].lower()
+            expeditor_str = crew["expeditor"].lower()
 
             message_text = (
                 f"🚚 <b>Ваш маршрут на сьогодні готовий!</b>\n\n"
@@ -325,13 +325,21 @@ def notify_drivers():
                 f"🔗 <a href='{app_link}'>Натисніть тут, щоб відкрити маршрут в VEGTAM</a>"
             )
 
-            if driver_surname and driver_surname in TELEGRAM_USERS:
-                send_telegram_message(TELEGRAM_USERS[driver_surname], message_text)
-                notified_count += 1
-
-            if expeditor_surname and expeditor_surname in TELEGRAM_USERS:
-                send_telegram_message(TELEGRAM_USERS[expeditor_surname], message_text)
-                notified_count += 1
+            sent_to_this_crew = set()
+            
+            # Гибкое сравнение: проверяем частичное вхождение фамилии (например, "Кравченко" найдется в "Кравченко О.В.")
+            for reg_name, chat_id in TELEGRAM_USERS.items():
+                if not reg_name:
+                    continue
+                
+                if (reg_name in driver_str or reg_name in expeditor_str or 
+                    (driver_str and driver_str in reg_name) or 
+                    (expeditor_str and expeditor_str in reg_name)):
+                    
+                    if chat_id not in sent_to_this_crew:
+                        send_telegram_message(chat_id, message_text)
+                        sent_to_this_crew.add(chat_id)
+                        notified_count += 1
 
         return {
             "status": "success",

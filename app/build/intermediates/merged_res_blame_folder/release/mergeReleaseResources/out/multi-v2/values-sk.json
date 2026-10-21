@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "app.vercel.logistics_app_livid.twa.app-mergeReleaseResources-25:/values-sk/values-sk.xml",
+            "outputFile": "com.vegtam.logistics.app-mergeReleaseResources-25:/values-sk/values-sk.xml",
             "map": [
                 {
                     "source": "/home/codespace/.gradle/caches/8.11.1/transforms/1cdcdc1afd1ba58bdf96faeeac79f5ae/transformed/core-1.17.0/res/values-sk/values-sk.xml",

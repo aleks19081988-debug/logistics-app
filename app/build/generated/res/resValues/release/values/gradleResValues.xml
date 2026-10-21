@@ -40,7 +40,7 @@
     <!-- Value from default config. -->
     <string name="orientation" translatable="false">portrait</string>
     <!-- Value from default config. -->
-    <string name="providerAuthority" translatable="false">app.vercel.logistics_app_livid.twa.fileprovider</string>
+    <string name="providerAuthority" translatable="false">com.vegtam.logistics.fileprovider</string>
     <!-- Value from default config. -->
     <string name="webManifestUrl" translatable="false">https://logistics-app-livid.vercel.app/manifest.json</string>
 

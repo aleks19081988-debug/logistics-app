@@ -1,4 +1,4 @@
-#Tue Oct 13 09:37:36 UTC 2026
+#Wed Oct 14 09:05:27 UTC 2026
 base.0=/workspaces/logistics-app/app/build/intermediates/dex/release/minifyReleaseWithR8/classes.dex
 renamed.0=classes.dex
 path.0=classes.dex

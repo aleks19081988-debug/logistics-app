@@ -1,5 +1,5 @@
 {
-  "packageId": "app.vercel.logistics_app_livid.twa",
+  "packageId": "com.vegtam.logistics",
   "host": "logistics-app-livid.vercel.app",
   "name": "VEGTAM Logistics",
   "launcherName": "VEGTAM",
@@ -20,8 +20,8 @@
     "path": "/workspaces/logistics-app/android.keystore",
     "alias": "android"
   },
-  "appVersionName": "2",
-  "appVersionCode": 2,
+  "appVersionName": "3",
+  "appVersionCode": 3,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://logistics-app-livid.vercel.app/manifest.json",
@@ -43,5 +43,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "2"
+  "appVersion": "3"
 }
