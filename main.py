@@ -247,12 +247,9 @@ def archive_current_day():
         return {"status": "error", "message": "Нет валидных записей для архивации"}
 
     try:
-        # Таймаут увеличен до 45 секунд
         res = requests.post(APPS_SCRIPT_URL, json={"rows": archive_rows}, timeout=45)
         return {"status": "success", "archived_count": len(archive_rows), "script_response": res.json()}
     except requests.exceptions.Timeout:
-        # Если Google обрабатывает запрос слишком долго, но данные уже ушли
-        print("⚠️ Google Apps Script ответил с задержкой, но данные успешно отправлены.")
         return {
             "status": "success",
             "archived_count": len(archive_rows),
@@ -289,60 +286,60 @@ async def telegram_webhook(request: Request):
 @app.post("/api/notify-drivers")
 def notify_drivers():
     """Считывает Графік КД и отправляет уведомления экипажам на сегодня"""
-    raw_schedule = get_sheet_data(gid="0", spreadsheet_id=SCHEDULE_SPREADSHEET_ID)
-    if not raw_schedule:
-        return {"status": "error", "message": "Не удалось прочитать таблицу 'Графік КД'"}
+    try:
+        raw_schedule = get_sheet_data(gid="0", spreadsheet_id=SCHEDULE_SPREADSHEET_ID)
+        if not raw_schedule:
+            return {"status": "error", "message": "Не удалось подключиться к таблице 'Графік КД'"}
 
-    # Поиск пар (Авто -> Водитель / Экспедитор) из графика
-    crews_today = []
-    
-    for row in raw_schedule:
-        for i in range(len(row)):
-            cell = str(row[i]).strip()
-            # Проверяем номер авто по стандартным украинским префиксам
-            if any(cell.startswith(prefix) for prefix in ["AA", "AI", "KA", "BK"]):
-                vehicle_no = cell
-                driver = str(row[i+1]).strip() if i + 1 < len(row) else ""
-                expeditor = str(row[i+2]).strip() if i + 2 < len(row) else ""
-                
-                if driver or expeditor:
-                    crews_today.append({
-                        "vehicle": vehicle_no,
-                        "driver": driver,
-                        "expeditor": expeditor
-                    })
+        crews_today = []
+        
+        for row in raw_schedule:
+            for i in range(len(row)):
+                cell = str(row[i]).strip()
+                if any(cell.startswith(prefix) for prefix in ["AA", "AI", "KA", "BK"]):
+                    vehicle_no = cell
+                    driver = str(row[i+1]).strip() if i + 1 < len(row) else ""
+                    expeditor = str(row[i+2]).strip() if i + 2 < len(row) else ""
+                    
+                    if driver or expeditor:
+                        crews_today.append({
+                            "vehicle": vehicle_no,
+                            "driver": driver,
+                            "expeditor": expeditor
+                        })
 
-    if not crews_today:
-        return {"status": "error", "message": "Не найдено экипажей на сегодня в графике"}
+        if not crews_today:
+            return {"status": "error", "message": "В графике не найдены экипажи на сегодня"}
 
-    notified_count = 0
-    app_link = "https://logistics-backend-3vj1.onrender.com"
+        notified_count = 0
+        app_link = "https://logistics-backend-3vj1.onrender.com"
 
-    for crew in crews_today:
-        v_num = crew["vehicle"]
-        driver_surname = crew["driver"].lower()
-        expeditor_surname = crew["expeditor"].lower()
+        for crew in crews_today:
+            v_num = crew["vehicle"]
+            driver_surname = crew["driver"].lower()
+            expeditor_surname = crew["expeditor"].lower()
 
-        message_text = (
-            f"🚚 <b>Ваш маршрут на сьогодні готовий!</b>\n\n"
-            f"🚗 <b>Авто:</b> <code>{v_num}</code>\n"
-            f"👥 <b>Екіпаж:</b> {crew['driver']} / {crew['expeditor']}\n\n"
-            f"🔗 <a href='{app_link}'>Натисніть тут, щоб відкрити маршрут в VEGTAM</a>"
-        )
+            message_text = (
+                f"🚚 <b>Ваш маршрут на сьогодні готовий!</b>\n\n"
+                f"🚗 <b>Авто:</b> <code>{v_num}</code>\n"
+                f"👥 <b>Екіпаж:</b> {crew['driver']} / {crew['expeditor']}\n\n"
+                f"🔗 <a href='{app_link}'>Натисніть тут, щоб відкрити маршрут в VEGTAM</a>"
+            )
 
-        # Проверяем водителя
-        if driver_surname and driver_surname in TELEGRAM_USERS:
-            send_telegram_message(TELEGRAM_USERS[driver_surname], message_text)
-            notified_count += 1
+            if driver_surname and driver_surname in TELEGRAM_USERS:
+                send_telegram_message(TELEGRAM_USERS[driver_surname], message_text)
+                notified_count += 1
 
-        # Проверяем экспедитора
-        if expeditor_surname and expeditor_surname in TELEGRAM_USERS:
-            send_telegram_message(TELEGRAM_USERS[expeditor_surname], message_text)
-            notified_count += 1
+            if expeditor_surname and expeditor_surname in TELEGRAM_USERS:
+                send_telegram_message(TELEGRAM_USERS[expeditor_surname], message_text)
+                notified_count += 1
 
-    return {
-        "status": "success",
-        "found_crews": len(crews_today),
-        "notified_users": notified_count,
-        "registered_telegram_users": len(TELEGRAM_USERS)
-    }
+        return {
+            "status": "success",
+            "found_crews": len(crews_today),
+            "notified_users": notified_count,
+            "registered_telegram_users": len(TELEGRAM_USERS)
+        }
+    except Exception as e:
+        print(f"❌ Ошибка в notify_drivers: {str(e)}")
+        return {"status": "error", "message": f"Ошибка сервера: {str(e)}"}
