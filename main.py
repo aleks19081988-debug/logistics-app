@@ -98,6 +98,15 @@ def home():
     return {"status": "online"}
 
 
+@app.get("/api/telegram-users")
+def get_telegram_users():
+    """Возвращает список всех зарегистрированных в боте пользователей (для отладки)"""
+    return {
+        "total_registered": len(TELEGRAM_USERS),
+        "users": TELEGRAM_USERS
+    }
+
+
 @app.get("/api/routes-by-vehicle")
 def get_routes_by_vehicle():
     data = get_sheet_data_dict(gid="0")
@@ -271,7 +280,7 @@ async def telegram_webhook(request: Request):
         if text.startswith("/start"):
             send_telegram_message(
                 chat_id,
-                "<b>Вітаємо у VEGTAM LOGISTICS BOT!</b> 🚚\n\nБудь ласка, введіть ваші <b>Прізвище</b> або дані (наприклад: <code>Кравченко</code>), щоб отримувати сповіщення про маршрути."
+                "<b>Вітаємо у VEGTAM LOGISTICS BOT!</b> 🚚\n\nБудь ласка, введіть ваше <b>Прізвище</b> (наприклад: <code>Кравченко</code>), щоб отримувати сповіщення про маршрути."
             )
         else:
             text_clean = text.lower()
@@ -293,12 +302,11 @@ def notify_drivers():
 
         crews_today = []
         
-        # Проходим по строкам графика (начиная со строки 1, пропуская шапку)
         for row in raw_schedule[1:]:
             if len(row) > 2:
-                vehicle_no = str(row[1]).strip() if len(row) > 1 else ""  # Колонка B (Авто)[cite: 7]
-                driver = str(row[2]).strip() if len(row) > 2 else ""      # Колонка C (Водій)[cite: 7]
-                expeditor = str(row[3]).strip() if len(row) > 3 else ""   # Колонка D (Експедитор)[cite: 7]
+                vehicle_no = str(row[1]).strip() if len(row) > 1 else ""  # Колонка B (Авто)
+                driver = str(row[2]).strip() if len(row) > 2 else ""      # Колонка C (Водій)
+                expeditor = str(row[3]).strip() if len(row) > 3 else ""   # Колонка D (Експедитор)
 
                 if vehicle_no and (driver or expeditor):
                     crews_today.append({
@@ -327,7 +335,6 @@ def notify_drivers():
 
             sent_to_this_crew = set()
             
-            # Гибкое сравнение: проверяем частичное вхождение фамилии (например, "Кравченко" найдется в "Кравченко О.В.")
             for reg_name, chat_id in TELEGRAM_USERS.items():
                 if not reg_name:
                     continue
