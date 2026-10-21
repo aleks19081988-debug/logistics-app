@@ -20,8 +20,9 @@ SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1nGRnER-mQj81NugFTaR1r
 DETAILS_GID = "1361088490"
 ARCHIVE_GID = "89786043"
 
-# Внешняя таблица с Графиком КД
+# Внешняя таблица с Графиком КД и её правильный GID
 SCHEDULE_SPREADSHEET_ID = "1zQ-CmoSIS3l0INqEzZBsif6RDxZ8bhIOTwIrnt9pFaAA"
+SCHEDULE_GID = "1977056405"
 
 # Telegram Bot Token & Google Apps Script
 TELEGRAM_BOT_TOKEN = "8981440107:AAGVTEmTGsk5j0_paOxxUa0EuWwQY_pSvIc"
@@ -285,9 +286,9 @@ async def telegram_webhook(request: Request):
 
 @app.post("/api/notify-drivers")
 def notify_drivers():
-    """Считывает Графік КД и отправляет уведомления экипажам на сегодня"""
+    """Считывает Графік КД (с указанным GID) и отправляет уведомления экипажам на сегодня"""
     try:
-        raw_schedule = get_sheet_data(gid="0", spreadsheet_id=SCHEDULE_SPREADSHEET_ID)
+        raw_schedule = get_sheet_data(gid=SCHEDULE_GID, spreadsheet_id=SCHEDULE_SPREADSHEET_ID)
         if not raw_schedule:
             return {"status": "error", "message": "Не удалось подключиться к таблице 'Графік КД'"}
 
