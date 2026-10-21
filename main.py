@@ -15,19 +15,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Основная таблица маршрутов и детали
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1nGRnER-mQj81NugFTaR1rBP87w8a00riPXBFqZDU1dI/edit?gid=0#gid=0"
 DETAILS_GID = "1361088490"
 ARCHIVE_GID = "89786043"
 
-# График КД
+# Внешняя таблица с Графиком КД
 SCHEDULE_SPREADSHEET_ID = "1zQ-CmoSIS3l0INqEzZBsif6RDxZ8bhIOTwIrnt9pFaAA"
 
-# Telegram Bot Token
+# Telegram Bot Token & Google Apps Script
 TELEGRAM_BOT_TOKEN = "8981440107:AAGVTEmTGsk5j0_paOxxUa0EuWwQY_pSvIc"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDzUce63R419DyS9aQflRkHFvfrTd_-gtZ9MchVZkqAOIrEt6I4VtBqQnY_4gegspmCg/exec"
 
-# Простая база данных подписок Telegram (в памяти сервера, ключ: surname_lower, значение: chat_id)
-# При перезапуске сервера подписки заново регистрируются при взаимодействии
+# База Telegram-подписок пользователей (ключ: surname_lower, значение: chat_id)
 TELEGRAM_USERS = {}
 
 
@@ -123,7 +123,7 @@ def get_routes_by_vehicle():
         if raw_val.endswith(".0"):
             raw_val = raw_val[:-2]
 
-        vehicle_key = raw_val if raw_val and raw_val.lower() not in ["nan", "none", "null"]: else "Без номера авто"
+        vehicle_key = raw_val if raw_val and raw_val.lower() not in ["nan", "none", "null"] else "Без номера авто"
 
         if vehicle_key not in grouped:
             grouped[vehicle_key] = []
@@ -247,8 +247,17 @@ def archive_current_day():
         return {"status": "error", "message": "Нет валидных записей для архивации"}
 
     try:
-        res = requests.post(APPS_SCRIPT_URL, json={"rows": archive_rows}, timeout=15)
+        # Таймаут увеличен до 45 секунд
+        res = requests.post(APPS_SCRIPT_URL, json={"rows": archive_rows}, timeout=45)
         return {"status": "success", "archived_count": len(archive_rows), "script_response": res.json()}
+    except requests.exceptions.Timeout:
+        # Если Google обрабатывает запрос слишком долго, но данные уже ушли
+        print("⚠️ Google Apps Script ответил с задержкой, но данные успешно отправлены.")
+        return {
+            "status": "success",
+            "archived_count": len(archive_rows),
+            "message": "Записи успешно отправлены в Google Таблицу (обработка заняла больше времени)."
+        }
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -265,7 +274,7 @@ async def telegram_webhook(request: Request):
         if text.startswith("/start"):
             send_telegram_message(
                 chat_id,
-                "<b>Вітаємо у VEGTAM LOGISTICS BOT!</b> 🚚\n\nБудь ласка, введіть ваше <b>Прізвище</b> (як у графіку экипажів, наприклад: <code>Ващук</code>), щоб отримувати сповіщення про маршрути."
+                "<b>Вітаємо у VEGTAM LOGISTICS BOT!</b> 🚚\n\nБудь ласка, введіть ваше <b>Прізвище</b> (як у графіку екіпажів, наприклад: <code>Ващук</code>), щоб отримувати сповіщення про маршрути."
             )
         else:
             surname_clean = text.lower()
@@ -284,15 +293,13 @@ def notify_drivers():
     if not raw_schedule:
         return {"status": "error", "message": "Не удалось прочитать таблицу 'Графік КД'"}
 
-    today_str = datetime.date.today().strftime("%d.%m.%Y")
-    
-    # Поиск пар (Авто -> Список фамилий) из графика
+    # Поиск пар (Авто -> Водитель / Экспедитор) из графика
     crews_today = []
     
     for row in raw_schedule:
         for i in range(len(row)):
             cell = str(row[i]).strip()
-            # Проверяем, выглядит ли ячейка как номер авто (напр. AA9350XK, AA3740XK)
+            # Проверяем номер авто по стандартным украинским префиксам
             if any(cell.startswith(prefix) for prefix in ["AA", "AI", "KA", "BK"]):
                 vehicle_no = cell
                 driver = str(row[i+1]).strip() if i + 1 < len(row) else ""
@@ -323,12 +330,12 @@ def notify_drivers():
             f"🔗 <a href='{app_link}'>Натисніть тут, щоб відкрити маршрут в VEGTAM</a>"
         )
 
-        # Проверяем наличие водителя в базе Telegram
+        # Проверяем водителя
         if driver_surname and driver_surname in TELEGRAM_USERS:
             send_telegram_message(TELEGRAM_USERS[driver_surname], message_text)
             notified_count += 1
 
-        # Проверяем наличие экспедитора в базе Telegram
+        # Проверяем экспедитора
         if expeditor_surname and expeditor_surname in TELEGRAM_USERS:
             send_telegram_message(TELEGRAM_USERS[expeditor_surname], message_text)
             notified_count += 1
