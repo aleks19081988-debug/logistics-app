@@ -15,20 +15,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Основная таблица маршрутов, деталей, архива и нового Графика КД
+# Основная таблица маршрутов, деталей, архива и графиков
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1nGRnER-mQj81NugFTaR1rBP87w8a00riPXBFqZDU1dI/edit?gid=0#gid=0"
 DETAILS_GID = "1361088490"
 ARCHIVE_GID = "89786043"
-
-# Внутренняя вкладка «Графік КД»
 SCHEDULE_GID = "1663850532"
+STAFF_GID = "2037633890"  # Вкладка для сотрудников
 
 # Telegram Bot Token & Google Apps Script
 TELEGRAM_BOT_TOKEN = "8981440107:AAGVTEmTGsk5j0_paOxxUa0EuWwQY_pSvIc"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDzUce63R419DyS9aQflRkHFvfrTd_-gtZ9MchVZkqAOIrEt6I4VtBqQnY_4gegspmCg/exec"
-
-# База Telegram-подписок пользователей (ключ: text_lower, значение: chat_id)
-TELEGRAM_USERS = {}
 
 
 def send_telegram_message(chat_id: int, text: str):
@@ -81,6 +77,35 @@ def get_sheet_data_dict(gid="0", spreadsheet_id=None):
         return []
 
 
+def load_telegram_users_from_sheet():
+    """Загружает привязанных пользователей из вкладки 'Сотрудники'"""
+    data = get_sheet_data(gid=STAFF_GID)
+    users = {}
+    for row in data[1:]:  # пропускаем заголовок
+        if len(row) > 1:
+            surname = str(row[0]).strip().lower()
+            chat_id_val = str(row[1]).strip()
+            if surname and chat_id_val and chat_id_val.lower() not in ["nan", "none", "null", ""]:
+                try:
+                    users[surname] = int(float(chat_id_val))
+                except:
+                    pass
+    return users
+
+
+def save_user_to_sheet(surname: str, chat_id: int):
+    """Отправляет новые данные сотрудника в Google Таблицу через Apps Script"""
+    try:
+        payload = {
+            "action": "save_staff",
+            "surname": surname,
+            "chat_id": chat_id
+        }
+        requests.post(APPS_SCRIPT_URL, json=payload, timeout=10)
+    except Exception as e:
+        print(f"❌ Ошибка сохранения сотрудника в таблицу:", e)
+
+
 def get_val_from_row(row, possible_names):
     for name in possible_names:
         target = name.lower()
@@ -100,10 +125,11 @@ def home():
 
 @app.get("/api/telegram-users")
 def get_telegram_users():
-    """Возвращает список всех зарегистрированных в боте пользователей (для отладки)"""
+    """Возвращает список всех зарегистрированных пользователей из таблицы"""
+    users = load_telegram_users_from_sheet()
     return {
-        "total_registered": len(TELEGRAM_USERS),
-        "users": TELEGRAM_USERS
+        "total_registered": len(users),
+        "users": users
     }
 
 
@@ -284,29 +310,30 @@ async def telegram_webhook(request: Request):
             )
         else:
             text_clean = text.lower()
-            TELEGRAM_USERS[text_clean] = chat_id
+            save_user_to_sheet(text_clean, chat_id)
             send_telegram_message(
                 chat_id,
-                f"✅ Дякуємо! Дані <b>{text.title()}</b> успішно прив'язано до цього акаунту.\n\nВи будете отримувати сповіщення при кожній розсилці маршруту!"
+                f"✅ Дякуємо! Дані <b>{text.title()}</b> успішно прив'язано до цього акаунту в базі.\n\nВи будете отримувати сповіщення при кожній розсилці маршруту!"
             )
     return {"status": "ok"}
 
 
 @app.post("/api/notify-drivers")
 def notify_drivers():
-    """Считывает вкладку 'Графік КД' и рассылает уведомления экипажам с гибким сопоставлением"""
+    """Считывает график и базу сотрудников из таблиц, затем рассылает уведомления"""
     try:
         raw_schedule = get_sheet_data(gid=SCHEDULE_GID)
         if not raw_schedule:
             return {"status": "error", "message": "Не удалось подключиться к вкладке 'Графік КД'"}
 
+        telegram_users = load_telegram_users_from_sheet()
+
         crews_today = []
-        
         for row in raw_schedule[1:]:
             if len(row) > 2:
-                vehicle_no = str(row[1]).strip() if len(row) > 1 else ""  # Колонка B (Авто)
-                driver = str(row[2]).strip() if len(row) > 2 else ""      # Колонка C (Водій)
-                expeditor = str(row[3]).strip() if len(row) > 3 else ""   # Колонка D (Експедитор)
+                vehicle_no = str(row[1]).strip() if len(row) > 1 else ""
+                driver = str(row[2]).strip() if len(row) > 2 else ""
+                expeditor = str(row[3]).strip() if len(row) > 3 else ""
 
                 if vehicle_no and (driver or expeditor):
                     crews_today.append({
@@ -335,7 +362,7 @@ def notify_drivers():
 
             sent_to_this_crew = set()
             
-            for reg_name, chat_id in TELEGRAM_USERS.items():
+            for reg_name, chat_id in telegram_users.items():
                 if not reg_name:
                     continue
                 
@@ -352,7 +379,7 @@ def notify_drivers():
             "status": "success",
             "found_crews": len(crews_today),
             "notified_users": notified_count,
-            "registered_telegram_users": len(TELEGRAM_USERS)
+            "registered_telegram_users": len(telegram_users)
         }
     except Exception as e:
         print(f"❌ Ошибка в notify_drivers: {str(e)}")
