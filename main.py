@@ -157,7 +157,6 @@ def get_delivery_details(doc_id: str):
     doc_id_clean = clean_doc(doc_id)
     matched_items = []
     for row in details_data:
-        # Ищем совпадение по любому ключу, содержащему "док"
         row_doc = ""
         for k, v in row.items():
             if "док" in str(k).lower():
@@ -286,6 +285,7 @@ async def telegram_webhook(request: Request):
 
 @app.post("/api/notify-drivers")
 def notify_drivers():
+    """Считывает график и базу сотрудников, рассылает уведомления и возвращает список тех, кому ушло"""
     try:
         raw_schedule = get_sheet_data(gid=SCHEDULE_GID)
         if not raw_schedule:
@@ -310,7 +310,7 @@ def notify_drivers():
         if not crews_today:
             return {"status": "error", "message": "В графике не найдены экипажи на сегодня"}
 
-        notified_count = 0
+        notified_list = []
         app_link = "https://logistics-backend-3vj1.onrender.com"
 
         for crew in crews_today:
@@ -321,26 +321,31 @@ def notify_drivers():
             message_text = (
                 f"🚚 <b>Ваш маршрут на сьогодні готовий!</b>\n\n"
                 f"🚗 <b>Авто:</b> <code>{v_num}</code>\n"
-                f"👥 <b>Екіпаж:</b> {crew['driver']} / {crew['expeditor']}\не"
+                f"👥 <b>Екіпаж:</b> {crew['driver']} / {crew['expeditor']}\n\n"
                 f"🔗 <a href='{app_link}'>Натисніть тут, щоб відкрити маршрут в VEGTAM</a>"
             )
 
             sent_to_this_crew = set()
+            
             for reg_name, chat_id in telegram_users.items():
                 if not reg_name:
                     continue
+                
                 if (reg_name in driver_str or reg_name in expeditor_str or 
                     (driver_str and driver_str in reg_name) or 
                     (expeditor_str and expeditor_str in reg_name)):
+                    
                     if chat_id not in sent_to_this_crew:
                         send_telegram_message(chat_id, message_text)
                         sent_to_this_crew.add(chat_id)
-                        notified_count += 1
+                        if reg_name not in notified_list:
+                            notified_list.append(reg_name)
 
         return {
             "status": "success",
             "found_crews": len(crews_today),
-            "notified_users": notified_count,
+            "notified_count": len(notified_list),
+            "notified_users": notified_list,
             "registered_telegram_users": len(telegram_users)
         }
     except Exception as e:
