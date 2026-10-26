@@ -303,45 +303,53 @@ def notify_drivers():
             return {"status": "error", "message": "Не удалось подключиться к вкладке 'Графік КД'"}
 
         telegram_users = load_telegram_users_from_sheet()
-        if not telegram_users:
-            return {"status": "error", "message": "В базе нет зарегистрированных пользователей"}
 
-        notified_list = []
-        sent_to_chats = set()
-        app_link = "https://logistics-backend-3vj1.onrender.com"
-        found_crews_count = 0
-
+        crews_today = []
         for row in raw_schedule[1:]:
             if len(row) > 3:
                 vehicle_no = str(row[1]).strip() if len(row) > 1 else "Без номера"
                 driver = str(row[2]).strip() if len(row) > 2 else ""
                 expeditor = str(row[3]).strip() if len(row) > 3 else ""
 
-                if driver or expeditor:
-                    found_crews_count += 1
-                    driver_lower = driver.lower()
-                    expeditor_lower = expeditor.lower()
+                if vehicle_no and (driver or expeditor):
+                    crews_today.append({
+                        "vehicle": vehicle_no,
+                        "driver": driver,
+                        "expeditor": expeditor
+                    })
 
-                    message_text = (
-                        f"🚚 <b>Ваш маршрут на сьогодні готовий!</b>\n\n"
-                        f"🚗 <b>Авто:</b> <code>{vehicle_no}</code>\n"
-                        f"👥 <b>Екіпаж:</b> {driver} / {expeditor}\n\n"
-                        f"🔗 <a href='{app_link}'>Натисніть тут, щоб відкрити маршрут в VEGTAM</a>"
-                    )
+        if not crews_today:
+            return {"status": "error", "message": "В графике не найдены экипажи на сегодня"}
 
-                    for reg_name, chat_id in telegram_users.items():
-                        if not reg_name:
-                            continue
-                        
-                        if (reg_name in driver_lower or reg_name in expeditor_lower or 
-                            (driver_lower and driver_lower in reg_name) or 
-                            (expeditor_lower and expeditor_lower in reg_name)):
-                            
-                            if chat_id not in sent_to_chats:
-                                send_telegram_message(chat_id, message_text)
-                                sent_to_chats.add(chat_id)
-                                if reg_name not in notified_list:
-                                    notified_list.append(reg_name)
+        notified_count = 0
+        app_link = "https://logistics-backend-3vj1.onrender.com"
+
+        for crew in crews_today:
+            v_num = crew["vehicle"]
+            driver_str = crew["driver"].lower()
+            expeditor_str = crew["expeditor"].lower()
+
+            message_text = (
+                f"🚚 <b>Ваш маршрут на сьогодні готовий!</b>\n\n"
+                f"🚗 <b>Авто:</b> <code>{v_num}</code>\n"
+                f"👥 <b>Екіпаж:</b> {crew['driver']} / {crew['expeditor']}\n\n"
+                f"🔗 <a href='{app_link}'>Натисніть тут, щоб відкрити маршрут в VEGTAM</a>"
+            )
+
+            sent_to_this_crew = set()
+            
+            for reg_name, chat_id in telegram_users.items():
+                if not reg_name:
+                    continue
+                
+                if (reg_name in driver_str or reg_name in expeditor_str or 
+                    (driver_str and driver_str in reg_name) or 
+                    (expeditor_str and expeditor_str in reg_name)):
+                    
+                    if chat_id not in sent_to_this_crew:
+                        send_telegram_message(chat_id, message_text)
+                        sent_to_this_crew.add(chat_id)
+                        notified_count += 1
 
         return {
             "status": "success",
