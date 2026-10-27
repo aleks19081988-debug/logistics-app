@@ -199,6 +199,7 @@ def search_archive(query: str):
 def archive_current_day():
     today_str = datetime.date.today().strftime("%d.%m.%Y")
     
+    # Защита от повторного создания архива за один день
     archive_existing = get_sheet_data(gid=ARCHIVE_GID)
     if archive_existing:
         for row in archive_existing:
@@ -295,9 +296,9 @@ async def telegram_webhook(request: Request):
 
 @app.post("/api/notify-drivers")
 def notify_drivers():
-    """Сканирует колонки C (Водій) и D (Експедитор) по всей таблице графика независимо от количества строк"""
+    """Сканирует колонки C (Водій) и D (Експедитор) по всей таблице графика"""
     try:
-        found_crews_count = 0  # Инициализируем переменную счетчика сразу
+        found_crews_count = 0
 
         raw_schedule = get_sheet_data(gid=SCHEDULE_GID)
         if not raw_schedule:
@@ -309,7 +310,9 @@ def notify_drivers():
 
         notified_list = []
         sent_to_chats = set()
-        app_link = "https://logistics-backend-3vj1.onrender.com"
+        
+        # Ссылка на фронтенд (веб-интерфейс на Vercel)
+        app_link = "https://logistics-app-livid.vercel.app"
 
         for row in raw_schedule[1:]:
             if len(row) > 3:
