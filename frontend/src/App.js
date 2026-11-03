@@ -508,7 +508,7 @@ function App() {
         </div>
       </header>
 
-      {/* Стильный блок погоды под дизайн интерфейса (в стиле блока итогов) */}
+      {/* Стильный блок погоды под дизайн интерфейса */}
       <div className="summary-card" style={{ padding: '15px 20px', marginBottom: '20px', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <span style={{ fontSize: '32px' }}>🌤️</span>
@@ -684,7 +684,7 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {detailsData.items.map((item, i) => (
                     <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px', backgroundColor: '#fff' }}>
-                      <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '4px'}>{item.name}</div>
+                      <div style={{ fontWeight: 600, color: '#2c3e50', marginBottom: '4px' }}>{item.name}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#555' }}>
                         <span>Кол-во: <strong>{item.quantity} шт.</strong></span>
                         {isCurrentDocPickupCash && (
@@ -695,27 +695,28 @@ function App() {
                   ))}
                 </div>
 
-                <div className="modal-actions" style={{ marginTop: '20px' }}>
-                  <button
-                    onClick={handleCloseDetails}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: '#6c757d',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Закрыть
-                  </button>
-                </div>
+                {isCurrentDocPickupCash && (
+                  <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '2px solid #eee', display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 'bold' }}>
+                    <span>Итого к оплате наличными:</span>
+                    <span style={{ color: '#28a745' }}>
+                      {detailsData.items.reduce((sum, item) => sum + parseNum(item.price), 0)} грн
+                    </span>
+                  </div>
+                )}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#777' }}>Товары не найдены</div>
+              <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>Товары не найдены для данного документа.</div>
             )}
+
+            <button 
+              onClick={handleCloseDetails}
+              style={{
+                width: '100%', marginTop: '20px', padding: '12px', backgroundColor: '#6c757d',
+                color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
+              Закрыть
+            </button>
           </div>
         </div>
       )}
