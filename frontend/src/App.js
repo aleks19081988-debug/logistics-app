@@ -44,14 +44,11 @@ function App() {
     fetchWeather();
   }, []);
 
-  // Загрузка прогноза погоды (на завтра) через бесплатный API Open-Meteo для Киева / Украины
   const fetchWeather = () => {
-    // Координаты Киева по умолчанию (можно скорректировать под ваш регион)
     fetch('https://api.open-meteo.com/v1/forecast?latitude=50.4501&longitude=30.5234&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto')
       .then((res) => res.json())
       .then((data) => {
         if (data && data.daily) {
-          // Берем индекс 1 — это завтрашний день
           const maxT = data.daily.temperature_2m_max[1];
           const minT = data.daily.temperature_2m_min[1];
           const wcode = data.daily.weathercode[1];
@@ -67,7 +64,6 @@ function App() {
   };
 
   const getWeatherDescription = (code) => {
-    // Простая расшифровка кодов погоды WMO
     if (code === 0) return '☀️ Ясно';
     if ([1, 2, 3].includes(code)) return '⛅ Переменная облачность';
     if ([45, 48].includes(code)) return '🌫️ Туман';
@@ -78,7 +74,6 @@ function App() {
     return '🌤️ Облачно';
   };
 
-  // Автоматический поиск по Архиву при вводе в строке поиска
   useEffect(() => {
     if (selectedVehicle === 'SEARCH' && searchQuery.trim().length >= 3) {
       setSearchingArchive(true);
@@ -509,6 +504,39 @@ function App() {
         </div>
       </header>
 
+      {/* Блок прогноза погоды на завтра — теперь отображается всегда вверху */}
+      <div style={{
+        backgroundColor: '#eef2f7',
+        borderRadius: '10px',
+        padding: '12px 16px',
+        margin: '15px 0',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+        border: '1px solid #e0e8f0'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '24px' }}>🌤️</span>
+          <div>
+            <div style={{ fontSize: '13px', color: '#666', fontWeight: 'bold' }}>ПОГОДА НА ЗАВТРА</div>
+            <div style={{ fontSize: '15px', color: '#2c3e50', fontWeight: '600' }}>
+              {weather ? weather.desc : 'Загрузка прогноза...'}
+            </div>
+          </div>
+        </div>
+        {weather && (
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#007bff' }}>
+              {weather.tempMax > 0 ? `+${weather.tempMax}` : weather.tempMax}°C
+            </span>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              ночью {weather.tempMin > 0 ? `+${weather.tempMin}` : weather.tempMin}°C
+            </div>
+          </div>
+        )}
+      </div>
+
       {authRole === 'ADMIN' && (
         <div className="vehicle-selector">
           {vehicles.map((v) => (
@@ -622,39 +650,6 @@ function App() {
             </div>
           </div>
 
-          {/* Блок прогноза погоды на завтра */}
-          <div style={{
-            backgroundColor: '#eef2f7',
-            borderRadius: '10px',
-            padding: '12px 16px',
-            marginBottom: '20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-            border: '1px solid #e0e8f0'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '24px' }}>🌤️</span>
-              <div>
-                <div style={{ fontSize: '13px', color: '#666', fontWeight: 'bold' }}>ПОГОДА НА ЗАВТРА</div>
-                <div style={{ fontSize: '15px', color: '#2c3e50', fontWeight: '600' }}>
-                  {weather ? weather.desc : 'Загрузка прогноза...'}
-                </div>
-              </div>
-            </div>
-            {weather && (
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#007bff' }}>
-                  {weather.tempMax > 0 ? `+${weather.tempMax}` : weather.tempMax}°C
-                </span>
-                <div style={{ fontSize: '12px', color: '#666' }}>
-                  ночью {weather.tempMin > 0 ? `+${weather.tempMin}` : weather.tempMin}°C
-                </div>
-              </div>
-            )}
-          </div>
-
           {sortedCurrentPoints.map((point, idx) => renderCard(point, idx, false))}
         </div>
       )}
@@ -687,7 +682,7 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {detailsData.items.map((item, i) => (
                     <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px', backgroundColor: '#fff' }}>
-                      <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '4px'}>{item.name}</div>
+                      <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '4px' }}>{item.name}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#555' }}>
                         <span>Кол-во: <strong>{item.quantity} шт.</strong></span>
                         {isCurrentDocPickupCash && (
