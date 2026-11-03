@@ -473,16 +473,6 @@ function App() {
           {authRole === 'ADMIN' && (
             <>
               <button
-                onClick={handleArchiveDay}
-                disabled={archiving}
-                style={{
-                  backgroundColor: '#fd7e14', color: '#fff', border: 'none', borderRadius: '6px',
-                  padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
-                }}
-              >
-                {archiving ? '⏳ Запись...' : '📁 В архив'}
-              </button>
-              <button
                 onClick={handleNotifyDrivers}
                 disabled={notifying}
                 style={{
