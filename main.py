@@ -326,7 +326,7 @@ def notify_drivers():
                     expeditor_lower = expeditor.lower()
 
                     message_text = (
-                        f"🚚 <b>Ваш маршрут на сьогодні готовий!</b>\n\n"
+                        f"🚚 <b>Ваш маршрут на завтра готовий!</b>\n\n"
                         f"🚗 <b>Авто:</b> <code>{vehicle_no}</code>\n"
                         f"👥 <b>Екіпаж:</b> {driver} / {expeditor}\n\n"
                         f"🔗 <a href='{app_link}'>Натисніть тут, щоб відкрити маршрут в VEGTAM</a>"
