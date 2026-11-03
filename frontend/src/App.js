@@ -31,18 +31,22 @@ function App() {
   const [isCurrentDocPickupCash, setIsCurrentDocPickupCash] = useState(false);
 
   const fetchWeather = useCallback(() => {
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=50.4501&longitude=30.5234&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto')
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=50.4501&longitude=30.5234&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum&timezone=auto')
       .then((res) => res.json())
       .then((data) => {
         if (data && data.daily) {
           const maxT = data.daily.temperature_2m_max[1];
           const minT = data.daily.temperature_2m_min[1];
           const wcode = data.daily.weathercode[1];
+          const precipProb = data.daily.precipitation_probability_max ? data.daily.precipitation_probability_max[1] : 0;
+          const precipSum = data.daily.precipitation_sum ? data.daily.precipitation_sum[1] : 0;
           
           setWeather({
             tempMax: Math.round(maxT),
             tempMin: Math.round(minT),
-            desc: getWeatherDescription(wcode)
+            desc: getWeatherDescription(wcode),
+            precipitationProbability: precipProb,
+            precipitationSum: precipSum
           });
         }
       })
@@ -504,33 +508,31 @@ function App() {
         </div>
       </header>
 
-      {/* Блок погоды */}
-      <div style={{
-        backgroundColor: '#eef2f7',
-        borderRadius: '10px',
-        padding: '12px 16px',
-        margin: '15px 0',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-        border: '1px solid #e0e8f0'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '24px' }}>🌤️</span>
+      {/* Стильный блок погоды под дизайн интерфейса (в стиле блока итогов) */}
+      <div className="summary-card" style={{ padding: '15px 20px', marginBottom: '20px', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <span style={{ fontSize: '32px' }}>🌤️</span>
           <div>
-            <div style={{ fontSize: '13px', color: '#666', fontWeight: 'bold' }}>ПОГОДА НА ЗАВТРА</div>
-            <div style={{ fontSize: '15px', color: '#2c3e50', fontWeight: '600' }}>
+            <div style={{ fontSize: '12px', color: '#8c9ba5', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'bold' }}>
+              Погода на завтра (Киев)
+            </div>
+            <div style={{ fontSize: '16px', color: '#fff', fontWeight: '600', marginTop: '2px' }}>
               {weather ? weather.desc : 'Загрузка прогноза...'}
             </div>
+            {weather && (
+              <div style={{ fontSize: '12px', color: '#adb5bd', marginTop: '4px', display: 'flex', gap: '10px' }}>
+                <span>💧 Осадки: {weather.precipitationProbability}% ({weather.precipitationSum} мм)</span>
+              </div>
+            )}
           </div>
         </div>
+
         {weather && (
           <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#007bff' }}>
+            <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#fff' }}>
               {weather.tempMax > 0 ? `+${weather.tempMax}` : weather.tempMax}°C
-            </span>
-            <div style={{ fontSize: '12px', color: '#666' }}>
+            </div>
+            <div style={{ fontSize: '12px', color: '#adb5bd' }}>
               ночью {weather.tempMin > 0 ? `+${weather.tempMin}` : weather.tempMin}°C
             </div>
           </div>
@@ -682,7 +684,7 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {detailsData.items.map((item, i) => (
                     <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px', backgroundColor: '#fff' }}>
-                      <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '4px' }}>{item.name}</div>
+                      <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '4px'}>{item.name}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#555' }}>
                         <span>Кол-во: <strong>{item.quantity} шт.</strong></span>
                         {isCurrentDocPickupCash && (
@@ -693,28 +695,27 @@ function App() {
                   ))}
                 </div>
 
-                {isCurrentDocPickupCash && (
-                  <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '2px solid #eee', display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 'bold' }}>
-                    <span>Итого к оплате наличными:</span>
-                    <span style={{ color: '#28a745' }}>
-                      {detailsData.items.reduce((sum, item) => sum + parseNum(item.price), 0)} грн
-                    </span>
-                  </div>
-                )}
+                <div className="modal-actions" style={{ marginTop: '20px' }}>
+                  <button
+                    onClick={handleCloseDetails}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      backgroundColor: '#6c757d',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Закрыть
+                  </button>
+                </div>
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>Товары не найдены для данного документа.</div>
+              <div style={{ textAlign: 'center', padding: '20px', color: '#777' }}>Товары не найдены</div>
             )}
-
-            <button 
-              onClick={handleCloseDetails}
-              style={{
-                width: '100%', marginTop: '20px', padding: '12px', backgroundColor: '#6c757d',
-                color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
-              }}
-            >
-              Закрыть
-            </button>
           </div>
         </div>
       )}
