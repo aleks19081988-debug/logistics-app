@@ -15,11 +15,10 @@ function App() {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [loginError, setLoginError] = useState('');
 
-  // Поиск, Архив и Рассылка
+  // Поиск и Рассылка
   const [searchQuery, setSearchQuery] = useState('');
   const [archiveResults, setArchiveResults] = useState([]);
   const [searchingArchive, setSearchingArchive] = useState(false);
-  const [archiving, setArchiving] = useState(false);
   const [notifying, setNotifying] = useState(false);
 
   // Модалка деталей
@@ -115,28 +114,6 @@ function App() {
     setLoginInput('');
     localStorage.removeItem('vegtam_role');
     localStorage.removeItem('vegtam_vehicle');
-  };
-
-  const handleArchiveDay = () => {
-    if (!window.confirm("Вы уверены, что хотите отправить текущий день в Архив в Google Таблице?")) {
-      return;
-    }
-
-    setArchiving(true);
-    fetch(`${API_URL}/api/archive-day`, { method: 'POST' })
-      .then((res) => res.json())
-      .then((res) => {
-        setArchiving(false);
-        if (res.status === 'success') {
-          alert(`Успешно! Добавлено записей в архив: ${res.archived_count}`);
-        } else {
-          alert(`Ошибка архивации: ${res.message || 'Неизвестная ошибка'}`);
-        }
-      })
-      .catch((err) => {
-        setArchiving(false);
-        alert(`Ошибка подключения к серверу: ${err.message}`);
-      });
   };
 
   const handleNotifyDrivers = () => {
@@ -471,18 +448,16 @@ function App() {
         </h1>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           {authRole === 'ADMIN' && (
-            <>
-              <button
-                onClick={handleNotifyDrivers}
-                disabled={notifying}
-                style={{
-                  backgroundColor: '#17a2b8', color: '#fff', border: 'none', borderRadius: '6px',
-                  padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
-                }}
-              >
-                {notifying ? '⏳ Отправка...' : '📢 Оповестить'}
-              </button>
-            </>
+            <button
+              onClick={handleNotifyDrivers}
+              disabled={notifying}
+              style={{
+                backgroundColor: '#17a2b8', color: '#fff', border: 'none', borderRadius: '6px',
+                padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
+              {notifying ? '⏳ Отправка...' : '📢 Оповестить'}
+            </button>
           )}
           <button 
             onClick={handleLogout}
