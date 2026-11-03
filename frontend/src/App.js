@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 const API_URL = 'https://logistics-backend-3vj1.onrender.com';
@@ -30,21 +30,7 @@ function App() {
   const [detailsData, setDetailsData] = useState(null);
   const [isCurrentDocPickupCash, setIsCurrentDocPickupCash] = useState(false);
 
-  useEffect(() => {
-    const savedRole = localStorage.getItem('vegtam_role');
-    const savedVehicle = localStorage.getItem('vegtam_vehicle');
-
-    if (savedRole) {
-      setAuthRole(savedRole);
-      if (savedRole === 'DRIVER' && savedVehicle) {
-        setAssignedVehicle(savedVehicle);
-      }
-    }
-    fetchData();
-    fetchWeather();
-  }, []);
-
-  const fetchWeather = () => {
+  const fetchWeather = useCallback(() => {
     fetch('https://api.open-meteo.com/v1/forecast?latitude=50.4501&longitude=30.5234&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto')
       .then((res) => res.json())
       .then((data) => {
@@ -61,7 +47,21 @@ function App() {
         }
       })
       .catch((err) => console.error('Ошибка загрузки погоды:', err));
-  };
+  }, []);
+
+  useEffect(() => {
+    const savedRole = localStorage.getItem('vegtam_role');
+    const savedVehicle = localStorage.getItem('vegtam_vehicle');
+
+    if (savedRole) {
+      setAuthRole(savedRole);
+      if (savedRole === 'DRIVER' && savedVehicle) {
+        setAssignedVehicle(savedVehicle);
+      }
+    }
+    fetchData();
+    fetchWeather();
+  }, [fetchWeather]);
 
   const getWeatherDescription = (code) => {
     if (code === 0) return '☀️ Ясно';
@@ -504,7 +504,7 @@ function App() {
         </div>
       </header>
 
-      {/* Явный блок погоды с меткой 2026 */}
+      {/* Блок погоды */}
       <div style={{
         backgroundColor: '#eef2f7',
         borderRadius: '10px',
@@ -514,12 +514,12 @@ function App() {
         justifyContent: 'space-between',
         alignItems: 'center',
         boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-        border: '1px solid #007bff'
+        border: '1px solid #e0e8f0'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '24px' }}>🌤️</span>
           <div>
-            <div style={{ fontSize: '13px', color: '#007bff', fontWeight: 'bold' }}>ПОГОДА НА ЗАВТРА (2026)</div>
+            <div style={{ fontSize: '13px', color: '#666', fontWeight: 'bold' }}>ПОГОДА НА ЗАВТРА</div>
             <div style={{ fontSize: '15px', color: '#2c3e50', fontWeight: '600' }}>
               {weather ? weather.desc : 'Загрузка прогноза...'}
             </div>
