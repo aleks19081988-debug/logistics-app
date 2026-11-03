@@ -504,7 +504,7 @@ function App() {
         </div>
       </header>
 
-      {/* Блок прогноза погоды на завтра — теперь отображается всегда вверху */}
+      {/* Явный блок погоды с меткой 2026 */}
       <div style={{
         backgroundColor: '#eef2f7',
         borderRadius: '10px',
@@ -514,12 +514,12 @@ function App() {
         justifyContent: 'space-between',
         alignItems: 'center',
         boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-        border: '1px solid #e0e8f0'
+        border: '1px solid #007bff'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '24px' }}>🌤️</span>
           <div>
-            <div style={{ fontSize: '13px', color: '#666', fontWeight: 'bold' }}>ПОГОДА НА ЗАВТРА</div>
+            <div style={{ fontSize: '13px', color: '#007bff', fontWeight: 'bold' }}>ПОГОДА НА ЗАВТРА (2026)</div>
             <div style={{ fontSize: '15px', color: '#2c3e50', fontWeight: '600' }}>
               {weather ? weather.desc : 'Загрузка прогноза...'}
             </div>
