@@ -20,6 +20,7 @@ DETAILS_GID = "1361088490"
 ARCHIVE_GID = "89786043"
 SCHEDULE_GID = "1663850532"
 STAFF_GID = "2037633890"
+TT_CONTACTS_GID = "2000504995"
 
 TELEGRAM_BOT_TOKEN = "8981440107:AAGVTEmTGsk5j0_paOxxUa0EuWwQY_pSvIc"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDzUce63R419DyS9aQflRkHFvfrTd_-gtZ9MchVZkqAOIrEt6I4VtBqQnY_4gegspmCg/exec"
@@ -195,11 +196,39 @@ def search_archive(query: str):
     return {"results": matched}
 
 
+@app.get("/api/tt-contacts")
+def get_tt_contacts():
+    """Считывает вкладку 'Актуальна база контактів' (gid=2000504995)"""
+    contacts_data = get_sheet_data_dict(gid=TT_CONTACTS_GID)
+    if not contacts_data:
+        return {"contacts": []}
+
+    contacts = []
+    for row in contacts_data:
+        address = get_val_from_row(row, ["адреса тт", "адреса", "адрес"])
+        tt_name = get_val_from_row(row, ["назва тт з т2.2", "назва тт", "название тт", "тт"])
+        name = get_val_from_row(row, ["піб", "пiб", "фио"])
+        position = get_val_from_row(row, ["посада", "должность"])
+        email = get_val_from_row(row, ["e-mail", "email", "пошта"])
+        phone = get_val_from_row(row, ["контактний номер телефону", "номер телефону", "телефон", "тел"])
+
+        if tt_name or name or phone:
+            contacts.append({
+                "address": address,
+                "ttName": tt_name,
+                "name": name,
+                "position": position,
+                "email": email,
+                "phone": phone
+            })
+
+    return {"contacts": contacts}
+
+
 @app.post("/api/archive-day")
 def archive_current_day():
     today_str = datetime.date.today().strftime("%d.%m.%Y")
     
-    # Защита от повторного создания архива за один день
     archive_existing = get_sheet_data(gid=ARCHIVE_GID)
     if archive_existing:
         for row in archive_existing:
@@ -311,7 +340,6 @@ def notify_drivers():
         notified_list = []
         sent_to_chats = set()
         
-        # Ссылка на фронтенд (веб-интерфейс на Vercel)
         app_link = "https://logistics-app-livid.vercel.app"
 
         for row in raw_schedule[1:]:
