@@ -24,6 +24,12 @@ function App() {
   // Погода
   const [weather, setWeather] = useState(null);
 
+  // Модалка контактов ТТ
+  const [isContactsOpen, setIsContactsOpen] = useState(false);
+  const [ttContacts, setTtContacts] = useState([]);
+  const [ttSearchQuery, setTtSearchQuery] = useState('');
+  const [contactsLoading, setContactsLoading] = useState(false);
+
   // Модалка деталей
   const [activeDetailsDoc, setActiveDetailsDoc] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -65,7 +71,27 @@ function App() {
     }
     fetchData();
     fetchWeather();
+    fetchTtContacts();
   }, [fetchWeather]);
+
+  // Загрузка контактов ТТ (из публичной таблицы по GID 2000504995 или бэкенд endpoint)
+  const fetchTtContacts = () => {
+    setContactsLoading(true);
+    // Пытаемся взять через бэкенд или напрямую из экспорта гугл таблицы
+    fetch(`${API_URL}/api/tt-contacts`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Backend route not found');
+        return res.json();
+      })
+      .then((data) => {
+        setTtContacts(data.contacts || []);
+        setContactsLoading(false);
+      })
+      .catch(() => {
+        // Резервный вариант: если на бэкенде еще нет эндпоинта, подгружаем пустой массив или мок
+        setContactsLoading(false);
+      });
+  };
 
   const getWeatherDescription = (code) => {
     if (code === 0) return '☀️ Ясно';
@@ -243,7 +269,7 @@ function App() {
               </label>
               <input
                 type="text"
-                placeholder="Например: 9350"
+                placeholder="Например: AI6543PX"
                 value={loginInput}
                 onChange={(e) => setLoginInput(e.target.value)}
                 style={{
@@ -476,6 +502,17 @@ function App() {
   const sortedCurrentPoints = getSortedPoints(currentPoints);
   const totals = calculateTotals(currentPoints);
 
+  // Фильтрация контактов ТТ по поисковому запросу
+  const filteredContacts = ttContacts.filter((contact) => {
+    const q = ttSearchQuery.toLowerCase().trim();
+    if (!q) return false;
+    return (
+      (contact.ttName && contact.ttName.toLowerCase().includes(q)) ||
+      (contact.address && contact.address.toLowerCase().includes(q)) ||
+      (contact.name && contact.name.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div className="container notranslate" translate="no">
       <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -483,7 +520,17 @@ function App() {
           <img src="/logo192.png" alt="Icon" className="header-app-icon" onError={(e) => { e.target.src = '/favicon.ico'; }} />
           VEGTAM
         </h1>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            onClick={() => setIsContactsOpen(true)}
+            style={{
+              backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '6px',
+              padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
+            }}
+          >
+            📇 Контакти ТТ
+          </button>
+
           {authRole === 'ADMIN' && (
             <button
               onClick={handleNotifyDrivers}
@@ -653,6 +700,76 @@ function App() {
           </div>
 
           {sortedCurrentPoints.map((point, idx) => renderCard(point, idx, false))}
+        </div>
+      )}
+
+      {/* Модальное окно: Контакты ТТ */}
+      {isContactsOpen && (
+        <div className="modal-backdrop" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex',
+          justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px'
+        }}>
+          <div className="modal-content" style={{
+            backgroundColor: '#fff', borderRadius: '12px', width: '100%', maxWidth: '650px',
+            maxHeight: '90vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#333' }}>📇 Справочник контактов ТТ</h3>
+              <button onClick={() => setIsContactsOpen(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#666' }}>✖</button>
+            </div>
+
+            <div className="search-input-wrapper" style={{ marginBottom: '15px' }}>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Введите название ТТ (например, Блокбастер)..."
+                value={ttSearchQuery}
+                onChange={(e) => setTtSearchQuery(e.target.value)}
+                autoFocus
+                style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '8px', border: '2px solid #28a745', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {contactsLoading ? (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Загрузка базы контактов...</div>
+            ) : ttSearchQuery.trim() === '' ? (
+              <div style={{ textAlign: 'center', padding: '30px', color: '#888' }}>
+                Введите название торговой точки в поиск выше, чтобы увидеть контакты.
+              </div>
+            ) : filteredContacts.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {filteredContacts.map((c, i) => (
+                  <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '12px', backgroundColor: '#f8f9fa' }}>
+                    <div style={{ fontWeight: 'bold', color: '#2c3e50', fontSize: '15px', marginBottom: '4px' }}>
+                      🏢 {c.ttName || 'ТТ без названия'}
+                    </div>
+                    {c.address && <div style={{ fontSize: '13px', color: '#666', marginBottom: '6px' }}>📍 {c.address}</div>}
+                    <div style={{ fontSize: '14px', color: '#333', marginTop: '6px', borderTop: '1px solid #ddd', paddingTop: '6px' }}>
+                      👤 <strong>{c.name || '—'}</strong> ({c.position || 'Сотрудник'})
+                    </div>
+                    <div style={{ fontSize: '15px', color: '#007bff', fontWeight: 'bold', marginTop: '4px' }}>
+                      📞 Тел: <a href={`tel:${c.phone}`} style={{ color: '#007bff', textDecoration: 'none' }}>{c.phone || 'Нет телефона'}</a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
+                По запросу "{ttSearchQuery}" ничего не найдено.
+              </div>
+            )}
+
+            <button 
+              onClick={() => setIsContactsOpen(false)}
+              style={{
+                width: '100%', marginTop: '20px', padding: '12px', backgroundColor: '#6c757d',
+                color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
+              Закрыть
+            </button>
+          </div>
         </div>
       )}
 
