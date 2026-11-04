@@ -225,6 +225,40 @@ def get_tt_contacts():
     return {"contacts": contacts}
 
 
+@app.get("/api/notify-new-feature")
+def notify_new_feature():
+    """Рассылает всем зарегистрированным в боте пользователям уведомление о новом справочнике контактов ТТ"""
+    try:
+        telegram_users = load_telegram_users_from_sheet()
+        if not telegram_users:
+            return {"status": "error", "message": "В базе нет зарегистрированных пользователей"}
+
+        app_link = "https://logistics-app-livid.vercel.app"
+        message_text = (
+            "📇 <b>Оновлення у VEGTAM LOGISTICS!</b>\n\n"
+            "Додано новий корисний функціонал — <b>Довідник контактів ТТ</b>!\n\n"
+            "Тепер у верхній панелі додатку доступна кнопка «Контакти ТТ», де можна швидко знайти ПІБ, посаду та телефон за назвою торгової точки чи адресою.\n\n"
+            f"🔗 <a href='{app_link}'>Відкрити додаток VEGTAM</a>"
+        )
+
+        sent_count = 0
+        sent_to_chats = set()
+
+        for surname, chat_id in telegram_users.items():
+            if chat_id and chat_id not in sent_to_chats:
+                send_telegram_message(chat_id, message_text)
+                sent_to_chats.add(chat_id)
+                sent_count += 1
+
+        return {
+            "status": "success",
+            "message": f"Успешно отправлено уведомление для {sent_count} пользователей."
+        }
+    except Exception as e:
+        print(f"❌ Ошибка в notify_new_feature:", e)
+        return {"status": "error", "message": str(e)}
+
+
 @app.post("/api/archive-day")
 def archive_current_day():
     today_str = datetime.date.today().strftime("%d.%m.%Y")
@@ -384,35 +418,3 @@ def notify_drivers():
     except Exception as e:
         print(f"❌ Ошибка в notify_drivers:", e)
         return {"status": "error", "message": f"Ошибка сервера: {str(e)}"}
-    @app.post("/api/notify-new-feature")
-def notify_new_feature():
-    """Рассылает всем зарегистрированным в боте пользователям уведомление о новом справочнике контактов ТТ"""
-    try:
-        telegram_users = load_telegram_users_from_sheet()
-        if not telegram_users:
-            return {"status": "error", "message": "В базе нет зарегистрированных пользователей"}
-
-        app_link = "https://logistics-app-livid.vercel.app"
-        message_text = (
-            "📇 <b>Оновлення у VEGTAM LOGISTICS!</b>\n\n"
-            "Додано новий корисний функціонал — <b>Довідник контактів ТТ</b>!\n\n"
-            "Тепер у верхній панелі додатку доступна кнопка «Контакти ТТ», де можна швидко знайти ПІБ, посаду та телефон за назвою торгової точки чи адресою.\n\n"
-            f"🔗 <a href='{app_link}'>Відкрити додаток VEGTAM</a>"
-        )
-
-        sent_count = 0
-        sent_to_chats = set()
-
-        for surname, chat_id in telegram_users.items():
-            if chat_id and chat_id not in sent_to_chats:
-                send_telegram_message(chat_id, message_text)
-                sent_to_chats.add(chat_id)
-                sent_count += 1
-
-        return {
-            "status": "success",
-            "message": f"Успешно отправлено уведомление для {sent_count} пользователей."
-        }
-    except Exception as e:
-        print(f"❌ Ошибка в notify_new_feature:", e)
-        return {"status": "error", "message": str(e)}
