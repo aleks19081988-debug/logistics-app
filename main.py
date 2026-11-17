@@ -21,6 +21,7 @@ ARCHIVE_GID = "89786043"
 SCHEDULE_GID = "1663850532"
 STAFF_GID = "2037633890"
 TT_CONTACTS_GID = "2000504995"
+MONTH_SCHEDULE_GID = "981949435"
 
 TELEGRAM_BOT_TOKEN = "8981440107:AAGVTEmTGsk5j0_paOxxUa0EuWwQY_pSvIc"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDzUce63R419DyS9aQflRkHFvfrTd_-gtZ9MchVZkqAOIrEt6I4VtBqQnY_4gegspmCg/exec"
@@ -225,9 +226,68 @@ def get_tt_contacts():
     return {"contacts": contacts}
 
 
+@app.get("/api/month-schedule")
+def get_month_schedule():
+    """Считывает месячный график (gid=981949435) и определяет, кто работает завтра (пустая ячейка)"""
+    try:
+        data = get_sheet_data(gid=MONTH_SCHEDULE_GID)
+        if not data or len(data) < 4:
+            return {"status": "error", "message": "График не найден", "working_staff": []}
+
+        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+        target_day_str = str(tomorrow.day)
+
+        day_col_index = -1
+        header_row_idx = -1
+
+        for r_idx, row in enumerate(data[:5]):
+            for c_idx, cell in enumerate(row):
+                if str(cell).strip() == target_day_str:
+                    day_col_index = c_idx
+                    header_row_idx = r_idx
+                    break
+            if day_col_index != -1:
+                break
+
+        if day_col_index == -1:
+            return {
+                "status": "success", 
+                "date": tomorrow.strftime("%d.%m.%Y"),
+                "working_staff": [],
+                "message": f"День {target_day_str} не найден в шапке графика"
+            }
+
+        working_staff = []
+
+        for row in data[header_row_idx + 1:]:
+            if len(row) > day_col_index:
+                fio = str(row[2]).strip() if len(row) > 2 else ""
+                auto = str(row[3]).strip() if len(row) > 3 else ""
+                status = str(row[day_col_index]).strip()
+
+                # Работает завтра, если ячейка пустая (или NaN)
+                is_empty_cell = status == "" or status.lower() in ["nan", "none"]
+
+                if fio and is_empty_cell:
+                    working_staff.append({
+                        "fio": fio,
+                        "auto": auto,
+                        "status": "Робочий день (зміна)"
+                    })
+
+        return {
+            "status": "success",
+            "date": tomorrow.strftime("%d.%m.%Y"),
+            "working_staff": working_staff
+        }
+    except Exception as e:
+        print(f"❌ Ошибка получения месячного графика:", e)
+        return {"status": "error", "message": str(e), "working_staff": []}
+
+
 @app.get("/api/notify-new-feature")
 def notify_new_feature():
-    """Рассылает всем зарегистрированным в боте пользователям уведомление о новом справочнике контактов ТТ"""
+    """Рассылает всем зарегистрированным в боте пользователям уведомление о новом функционале"""
     try:
         telegram_users = load_telegram_users_from_sheet()
         if not telegram_users:
@@ -236,8 +296,8 @@ def notify_new_feature():
         app_link = "https://logistics-app-livid.vercel.app"
         message_text = (
             "📇 <b>Оновлення у VEGTAM LOGISTICS!</b>\n\n"
-            "Додано новий корисний функціонал — <b>Довідник контактів ТТ</b>!\n\n"
-            "Тепер у верхній панелі додатку доступна кнопка «Контакти ТТ», де можна швидко знайти ПІБ, посаду та телефон за назвою торгової точки чи адресою.\n\n"
+            "Додано новий корисний функціонал — <b>Довідник контактів ТТ</b> та <b>Графік роботи</b>!\n\n"
+            "Тепер у верхній панелі додатку доступні кнопки для швидкого пошуку контактів та перевірки графіку зміни.\n\n"
             f"🔗 <a href='{app_link}'>Відкрити додаток VEGTAM</a>"
         )
 
