@@ -239,11 +239,17 @@ def get_month_schedule():
 
         day_col_index = -1
 
-        for r_idx, row in enumerate(data):
+        for r_idx, row in enumerate(data[:6]):
             for c_idx, cell in enumerate(row):
                 val_clean = str(cell).strip()
-                if val_clean == target_day_str and day_col_index == -1:
+                if val_clean.endswith(".0"):
+                    val_clean = val_clean[:-2]
+                
+                if val_clean == target_day_str:
                     day_col_index = c_idx
+                    break
+            if day_col_index != -1:
+                break
 
         if day_col_index == -1:
             return {
