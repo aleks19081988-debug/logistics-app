@@ -30,6 +30,11 @@ function App() {
   const [ttSearchQuery, setTtSearchQuery] = useState('');
   const [contactsLoading, setContactsLoading] = useState(false);
 
+  // Модалка графика смен
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [monthScheduleData, setMonthScheduleData] = useState(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+
   // Модалка деталей
   const [activeDetailsDoc, setActiveDetailsDoc] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -74,10 +79,8 @@ function App() {
     fetchTtContacts();
   }, [fetchWeather]);
 
-  // Загрузка контактов ТТ (из публичной таблицы по GID 2000504995 или бэкенд endpoint)
   const fetchTtContacts = () => {
     setContactsLoading(true);
-    // Пытаемся взять через бэкенд или напрямую из экспорта гугл таблицы
     fetch(`${API_URL}/api/tt-contacts`)
       .then((res) => {
         if (!res.ok) throw new Error('Backend route not found');
@@ -88,8 +91,22 @@ function App() {
         setContactsLoading(false);
       })
       .catch(() => {
-        // Резервный вариант: если на бэкенде еще нет эндпоинта, подгружаем пустой массив или мок
         setContactsLoading(false);
+      });
+  };
+
+  const fetchMonthSchedule = () => {
+    setScheduleLoading(true);
+    setIsScheduleModalOpen(true);
+    fetch(`${API_URL}/api/month-schedule`)
+      .then(res => res.json())
+      .then(data => {
+        setMonthScheduleData(data);
+        setScheduleLoading(false);
+      })
+      .catch(err => {
+        console.error('Ошибка загрузки графика:', err);
+        setScheduleLoading(false);
       });
   };
 
@@ -502,7 +519,6 @@ function App() {
   const sortedCurrentPoints = getSortedPoints(currentPoints);
   const totals = calculateTotals(currentPoints);
 
-  // Фильтрация контактов ТТ по поисковому запросу
   const filteredContacts = ttContacts.filter((contact) => {
     const q = ttSearchQuery.toLowerCase().trim();
     if (!q) return false;
@@ -529,6 +545,16 @@ function App() {
             }}
           >
             📇 Контакти ТТ
+          </button>
+
+          <button
+            onClick={fetchMonthSchedule}
+            style={{
+              backgroundColor: '#6f42c1', color: '#fff', border: 'none', borderRadius: '6px',
+              padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
+            }}
+          >
+            📅 Графік
           </button>
 
           {authRole === 'ADMIN' && (
@@ -634,10 +660,8 @@ function App() {
           </div>
 
           <div className="points-list">
-            {/* Сегодняшние маршруты */}
             {filteredPoints.map((point, idx) => renderCard(point, idx, true))}
 
-            {/* Результаты из Архива */}
             {searchingArchive && (
               <div style={{ textAlign: 'center', color: '#666', padding: '15px' }}>🔍 Поиск в архиве...</div>
             )}
@@ -773,6 +797,58 @@ function App() {
         </div>
       )}
 
+      {/* Модальное окно: График смен на завтра */}
+      {isScheduleModalOpen && (
+        <div className="modal-backdrop" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex',
+          justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px'
+        }}>
+          <div className="modal-content" style={{
+            backgroundColor: '#fff', borderRadius: '12px', width: '100%', maxWidth: '550px',
+            maxHeight: '90vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#333' }}>📅 Графік роботи на завтра ({monthScheduleData?.date || '...'})</h3>
+              <button onClick={() => setIsScheduleModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#666' }}>✖</button>
+            </div>
+
+            {scheduleLoading ? (
+              <div style={{ textAlign: 'center', padding: '30px', color: '#666' }}>Загрузка графика смен...</div>
+            ) : monthScheduleData && monthScheduleData.working_staff && monthScheduleData.working_staff.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {monthScheduleData.working_staff.map((person, i) => (
+                  <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px 12px', backgroundColor: '#f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#2c3e50', fontSize: '15px' }}>👤 {person.fio}</div>
+                      {person.auto && <div style={{ fontSize: '13px', color: '#666', marginTop: '2px' }}>🚗 Авто: <span className="license-plate">{person.auto}</span></div>}
+                    </div>
+                    <div style={{ backgroundColor: '#28a745', color: '#fff', padding: '4px 10px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>
+                      Зміна: {person.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '30px', color: '#888' }}>
+                На завтра нет работающих сотрудников по графику.
+              </div>
+            )}
+
+            <button 
+              onClick={() => setIsScheduleModalOpen(false)}
+              style={{
+                width: '100%', marginTop: '20px', padding: '12px', backgroundColor: '#6c757d',
+                color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
+              Закрити
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно: Детали документа */}
       {activeDetailsDoc && (
         <div className="modal-backdrop" style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
