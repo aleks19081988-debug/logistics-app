@@ -228,61 +228,76 @@ def get_tt_contacts():
 
 @app.get("/api/month-schedule")
 def get_month_schedule():
-    """Считывает месячный график (gid=981949435) и определяет, кто работает завтра (пустая ячейка)"""
+    """Считывает месячный график (gid=981949435), разделяя на Водителей и Экспедиторов"""
     try:
         data = get_sheet_data(gid=MONTH_SCHEDULE_GID)
         if not data or len(data) < 4:
-            return {"status": "error", "message": "График не найден", "working_staff": []}
+            return {"status": "error", "message": "График не найден", "drivers": [], "expeditors": []}
 
         tomorrow = datetime.date.today() + datetime.timedelta(days=1)
         target_day_str = str(tomorrow.day)
 
         day_col_index = -1
-        header_row_idx = -1
 
-        for r_idx, row in enumerate(data[:5]):
+        for r_idx, row in enumerate(data):
             for c_idx, cell in enumerate(row):
-                if str(cell).strip() == target_day_str:
+                val_clean = str(cell).strip()
+                if val_clean == target_day_str and day_col_index == -1:
                     day_col_index = c_idx
-                    header_row_idx = r_idx
-                    break
-            if day_col_index != -1:
-                break
 
         if day_col_index == -1:
             return {
                 "status": "success", 
                 "date": tomorrow.strftime("%d.%m.%Y"),
-                "working_staff": [],
+                "drivers": [],
+                "expeditors": [],
                 "message": f"День {target_day_str} не найден в шапке графика"
             }
 
-        working_staff = []
+        drivers_list = []
+        expeditors_list = []
+        current_section = None
 
-        for row in data[header_row_idx + 1:]:
+        for row in data:
+            row_text = " ".join([str(c).lower() for c in row])
+            
+            if "водії" in row_text:
+                current_section = "drivers"
+                continue
+            elif "експедитори" in row_text:
+                current_section = "експедитори"
+                continue
+
             if len(row) > day_col_index:
-                fio = str(row[2]).strip() if len(row) > 2 else ""
-                auto = str(row[3]).strip() if len(row) > 3 else ""
+                fio = str(row[1]).strip() if len(row) > 1 else ""
+                
+                if not fio or fio.lower() in ["nan", "none", "ф.и.о.", "п.і.о."]:
+                    continue
+
                 status = str(row[day_col_index]).strip()
+                is_working = status == "" or status.lower() in ["nan", "none"]
 
-                # Работает завтра, если ячейка пустая (или NaN)
-                is_empty_cell = status == "" or status.lower() in ["nan", "none"]
-
-                if fio and is_empty_cell:
-                    working_staff.append({
-                        "fio": fio,
-                        "auto": auto,
-                        "status": "Робочий день (зміна)"
-                    })
+                if is_working:
+                    if current_section == "drivers":
+                        auto = str(row[2]).strip() if len(row) > 2 else ""
+                        drivers_list.append({
+                            "fio": fio,
+                            "auto": auto if auto and auto.lower() not in ["nan", "none"] else ""
+                        })
+                    elif current_section == "експедитори":
+                        expeditors_list.append({
+                            "fio": fio
+                        })
 
         return {
             "status": "success",
             "date": tomorrow.strftime("%d.%m.%Y"),
-            "working_staff": working_staff
+            "drivers": drivers_list,
+            "expeditors": expeditors_list
         }
     except Exception as e:
         print(f"❌ Ошибка получения месячного графика:", e)
-        return {"status": "error", "message": str(e), "working_staff": []}
+        return {"status": "error", "message": str(e), "drivers": [], "expeditors": []}
 
 
 @app.get("/api/notify-new-feature")

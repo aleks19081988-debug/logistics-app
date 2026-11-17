@@ -797,7 +797,7 @@ function App() {
         </div>
       )}
 
-      {/* Модальное окно: График смен на завтра */}
+      {/* Модальное окно: График смен на завтра (разделено на Водителей и Экспедиторов по фамилиям) */}
       {isScheduleModalOpen && (
         <div className="modal-backdrop" style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -805,7 +805,7 @@ function App() {
           justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px'
         }}>
           <div className="modal-content" style={{
-            backgroundColor: '#fff', borderRadius: '12px', width: '100%', maxWidth: '550px',
+            backgroundColor: '#fff', borderRadius: '12px', width: '100%', maxWidth: '600px',
             maxHeight: '90vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
@@ -815,24 +815,47 @@ function App() {
 
             {scheduleLoading ? (
               <div style={{ textAlign: 'center', padding: '30px', color: '#666' }}>Загрузка графика смен...</div>
-            ) : monthScheduleData && monthScheduleData.working_staff && monthScheduleData.working_staff.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {monthScheduleData.working_staff.map((person, i) => (
-                  <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px 12px', backgroundColor: '#f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontWeight: 'bold', color: '#2c3e50', fontSize: '15px' }}>👤 {person.fio}</div>
-                      {person.auto && <div style={{ fontSize: '13px', color: '#666', marginTop: '2px' }}>🚗 Авто: <span className="license-plate">{person.auto}</span></div>}
-                    </div>
-                    <div style={{ backgroundColor: '#28a745', color: '#fff', padding: '4px 10px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px' }}>
-                      Зміна: {person.status}
-                    </div>
+            ) : monthScheduleData ? (
+              <div>
+                {/* Секция Водителей */}
+                <h4 style={{ color: '#007bff', borderBottom: '2px solid #007bff', paddingBottom: '4px', marginTop: '5px' }}>
+                  🚗 Водії ({monthScheduleData.drivers?.length || 0})
+                </h4>
+                {monthScheduleData.drivers && monthScheduleData.drivers.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '15px' }}>
+                    {monthScheduleData.drivers.map((d, i) => (
+                      <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px', backgroundColor: '#f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontWeight: 'bold', color: '#2c3e50', fontSize: '15px' }}>👤 {d.fio}</div>
+                        {d.auto ? (
+                          <span className="license-plate" style={{ fontSize: '14px', padding: '4px 8px', backgroundColor: '#e2e3e5', borderRadius: '6px' }}>{d.auto}</span>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: '#888' }}>Без авто</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div style={{ color: '#888', fontSize: '14px', marginBottom: '15px' }}>Нет работающих водителей на завтра.</div>
+                )}
+
+                {/* Секция Экспедиторов */}
+                <h4 style={{ color: '#28a745', borderBottom: '2px solid #28a745', paddingBottom: '4px', marginTop: '15px' }}>
+                  📦 Експедитори ({monthScheduleData.expeditors?.length || 0})
+                </h4>
+                {monthScheduleData.expeditors && monthScheduleData.expeditors.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {monthScheduleData.expeditors.map((e, i) => (
+                      <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px', backgroundColor: '#f8f9fa' }}>
+                        <div style={{ fontWeight: 'bold', color: '#2c3e50', fontSize: '15px' }}>👤 {e.fio}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: '#888', fontSize: '14px' }}>Нет работающих экспедиторов на завтра.</div>
+                )}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '30px', color: '#888' }}>
-                На завтра нет работающих сотрудников по графику.
-              </div>
+              <div style={{ textAlign: 'center', padding: '30px', color: '#888' }}>Не удалось загрузить данные графика.</div>
             )}
 
             <button 
