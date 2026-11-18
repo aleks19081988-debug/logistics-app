@@ -228,7 +228,7 @@ def get_tt_contacts():
 
 @app.get("/api/month-schedule")
 def get_month_schedule():
-    """Считывает месячный график (gid=981949435) с двумя таблицами рядом (Водители слева, Экспедиторы справа)"""
+    """Считывает месячный график (gid=981949435) с двумя параллельными таблицами (Водители и Экспедиторы)"""
     try:
         data = get_sheet_data(gid=MONTH_SCHEDULE_GID)
         if not data or len(data) < 4:
@@ -266,7 +266,7 @@ def get_month_schedule():
         start_row = header_row_idx + 1 if header_row_idx != -1 else 4
 
         for row in data[start_row:]:
-            # Водители (левая часть)
+            # 1. Водители (левая таблица)
             if len(row) > driver_day_col:
                 fio_drv = str(row[1]).strip() if len(row) > 1 else ""
                 if fio_drv and fio_drv.lower() not in ["nan", "none", "ф.и.о.", "п.і.о."]:
@@ -278,24 +278,27 @@ def get_month_schedule():
                             "auto": auto_val if auto_val.lower() not in ["nan", "none"] else ""
                         })
 
-            # Экспедиторы (правая часть)
+            # 2. Экспедиторы (правая таблица)
             if exped_day_col != -1:
-                name_col_idx = exped_day_col - 2
-                if name_col_idx >= 0 and len(row) > exped_day_col:
-                    fio_exp = str(row[name_col_idx]).strip() if len(row) > name_col_idx else ""
-                    if not fio_exp or fio_exp.isdigit() or fio_exp.lower() in ["nan", "none"]:
-                        if name_col_idx - 1 >= 0 and len(row) > name_col_idx - 1:
-                            val_alt = str(row[name_col_idx - 1]).strip()
-                            if val_alt and not val_alt.isdigit() and val_alt.lower() not in ["nan", "none"]:
-                                fio_exp = val_alt
+                fio_exp = ""
+                for offset in [2, 3, 1, 4, 5]:
+                    col_idx = exped_day_col - offset
+                    if col_idx >= 0 and len(row) > col_idx:
+                        val = str(row[col_idx]).strip()
+                        if val and not val.isdigit() and val.lower() not in [
+                            "nan", "none", "ф.и.о.", "п.і.о.", "листопад", "грудень", "січень", 
+                            "0", "1", "р", "л", "с", "б", "в"
+                        ] and len(val) > 3:
+                            fio_exp = val
+                            break
 
-                    if fio_exp and fio_exp.lower() not in ["nan", "none", "ф.и.о.", "п.і.о.", "листопад"]:
-                        status_exp = str(row[exped_day_col]).strip()
-                        if status_exp == "" or status_exp.lower() in ["nan", "none"]:
-                            if not any(e["fio"] == fio_exp for e in expeditors_list):
-                                expeditors_list.append({
-                                    "fio": fio_exp
-                                })
+                if fio_exp:
+                    status_exp = str(row[exped_day_col]).strip()
+                    if status_exp == "" or status_exp.lower() in ["nan", "none"]:
+                        if not any(e["fio"] == fio_exp for e in expeditors_list):
+                            expeditors_list.append({
+                                "fio": fio_exp
+                            })
 
         return {
             "status": "success",
