@@ -320,6 +320,54 @@ def get_month_schedule():
         return {"status": "error", "message": str(e), "drivers": [], "expeditors": []}
 
 
+@app.get("/api/statistics/deliveries-by-vehicle")
+def get_deliveries_statistics():
+    """Считает статистику доставок по автомобилям и месяцам из вкладки Архива (ARCHIVE_GID)"""
+    try:
+        archive_data = get_sheet_data_dict(gid=ARCHIVE_GID)
+        if not archive_data:
+            return {"status": "success", "stats": {}}
+
+        stats = {}
+
+        for row in archive_data:
+            date_str = str(row.get("Дата", "")).strip()
+            driver_field = str(row.get("Водій / Авто", "")).strip()
+
+            if not date_str or not driver_field:
+                continue
+
+            parts = date_str.split(".")
+            if len(parts) == 3:
+                month_year = f"{parts[1]}.{parts[2]}"
+            else:
+                month_year = "Другое"
+
+            vehicle_key = driver_field
+            if "/" in driver_field:
+                parts_dv = [p.strip() for p in driver_field.split("/")]
+                vehicle_key = parts_dv[-1]
+
+            if not vehicle_key or vehicle_key.lower() in ["nan", "none"]:
+                vehicle_key = "Без авто"
+
+            if vehicle_key not in stats:
+                stats[vehicle_key] = {}
+
+            if month_year not in stats[vehicle_key]:
+                stats[vehicle_key][month_year] = 0
+
+            stats[vehicle_key][month_year] += 1
+
+        return {
+            "status": "success",
+            "stats": stats
+        }
+    except Exception as e:
+        print(f"❌ Ошибка расчета статистики:", e)
+        return {"status": "error", "message": str(e), "stats": {}}
+
+
 @app.get("/api/notify-new-feature")
 def notify_new_feature():
     """Рассылает всем зарегистрированным в боте пользователям уведомление о новом функционале"""

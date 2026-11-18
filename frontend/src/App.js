@@ -1,941 +1,411 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
-const API_URL = 'https://logistics-backend-3vj1.onrender.com';
-const ADMIN_PIN = '0000';
+// Замените на ваш URL бэкенда на Render или оставьте относительный, если настроено
+const API_URL = "https://your-backend-url.onrender.com"; 
 
 function App() {
   const [routes, setRoutes] = useState({});
   const [loading, setLoading] = useState(true);
+  const [authRole, setAuthRole] = useState(localStorage.getItem('vegtam_role') || null);
+  
+  // Модальные окна
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [docDetails, setDocDetails] = useState([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
-  // Авторизация
-  const [loginInput, setLoginInput] = useState('');
-  const [authRole, setAuthRole] = useState(null);
-  const [assignedVehicle, setAssignedVehicle] = useState(null);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [loginError, setLoginError] = useState('');
-
-  // Поиск и Рассылка
-  const [searchQuery, setSearchQuery] = useState('');
-  const [archiveResults, setArchiveResults] = useState([]);
-  const [searchingArchive, setSearchingArchive] = useState(false);
-  const [notifying, setNotifying] = useState(false);
-
-  // Погода
-  const [weather, setWeather] = useState(null);
-
-  // Модалка контактов ТТ
-  const [isContactsOpen, setIsContactsOpen] = useState(false);
-  const [ttContacts, setTtContacts] = useState([]);
-  const [ttSearchQuery, setTtSearchQuery] = useState('');
-  const [contactsLoading, setContactsLoading] = useState(false);
-
-  // Модалка графика смен
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [monthScheduleData, setMonthScheduleData] = useState(null);
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [scheduleData, setScheduleData] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
 
-  // Модалка деталей
-  const [activeDetailsDoc, setActiveDetailsDoc] = useState(null);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-  const [detailsData, setDetailsData] = useState(null);
-  const [isCurrentDocPickupCash, setIsCurrentDocPickupCash] = useState(false);
+  const [isContactsOpen, setIsContactsOpen] = useState(false);
+  const [contactsData, setContactsData] = useState([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
 
-  const fetchWeather = useCallback(() => {
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=50.4501&longitude=30.5234&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum&timezone=auto')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.daily) {
-          const maxT = data.daily.temperature_2m_max[1];
-          const minT = data.daily.temperature_2m_min[1];
-          const wcode = data.daily.weathercode[1];
-          const precipProb = data.daily.precipitation_probability_max ? data.daily.precipitation_probability_max[1] : 0;
-          const precipSum = data.daily.precipitation_sum ? data.daily.precipitation_sum[1] : 0;
-          
-          setWeather({
-            tempMax: Math.round(maxT),
-            tempMin: Math.round(minT),
-            desc: getWeatherDescription(wcode),
-            precipitationProbability: precipProb,
-            precipitationSum: precipSum
-          });
-        }
-      })
-      .catch((err) => console.error('Ошибка загрузки погоды:', err));
+  // Новые состояния для Статистики
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [statsData, setStatsData] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchRoutes();
   }, []);
 
-  useEffect(() => {
-    const savedRole = localStorage.getItem('vegtam_role');
-    const savedVehicle = localStorage.getItem('vegtam_vehicle');
-
-    if (savedRole) {
-      setAuthRole(savedRole);
-      if (savedRole === 'DRIVER' && savedVehicle) {
-        setAssignedVehicle(savedVehicle);
-      }
-    }
-    fetchData();
-    fetchWeather();
-    fetchTtContacts();
-  }, [fetchWeather]);
-
-  const fetchTtContacts = () => {
-    setContactsLoading(true);
-    fetch(`${API_URL}/api/tt-contacts`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Backend route not found');
-        return res.json();
-      })
-      .then((data) => {
-        setTtContacts(data.contacts || []);
-        setContactsLoading(false);
-      })
-      .catch(() => {
-        setContactsLoading(false);
-      });
-  };
-
-  const fetchMonthSchedule = () => {
-    setScheduleLoading(true);
-    setIsScheduleModalOpen(true);
-    fetch(`${API_URL}/api/month-schedule`)
+  const fetchRoutes = () => {
+    setLoading(true);
+    fetch(`${API_URL}/api/routes-by-vehicle`)
       .then(res => res.json())
       .then(data => {
-        setMonthScheduleData(data);
-        setScheduleLoading(false);
+        setRoutes(data || {});
+        setLoading(false);
       })
       .catch(err => {
-        console.error('Ошибка загрузки графика:', err);
-        setScheduleLoading(false);
-      });
-  };
-
-  const getWeatherDescription = (code) => {
-    if (code === 0) return '☀️ Ясно';
-    if ([1, 2, 3].includes(code)) return '⛅ Переменная облачность';
-    if ([45, 48].includes(code)) return '🌫️ Туман';
-    if ([51, 53, 55, 56, 57].includes(code)) return '🌧️ Морось';
-    if ([61, 63, 65, 66, 67].includes(code)) return '🌧️ Дождь';
-    if ([71, 73, 75, 77].includes(code)) return '❄️ Снег';
-    if ([95, 96, 99].includes(code)) return '⛈️ Гроза';
-    return '🌤️ Облачно';
-  };
-
-  useEffect(() => {
-    if (selectedVehicle === 'SEARCH' && searchQuery.trim().length >= 3) {
-      setSearchingArchive(true);
-      fetch(`${API_URL}/api/search-archive/${encodeURIComponent(searchQuery.trim())}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setArchiveResults(data.results || []);
-          setSearchingArchive(false);
-        })
-        .catch((err) => {
-          console.error('Ошибка поиска в архиве:', err);
-          setSearchingArchive(false);
-        });
-    } else {
-      setArchiveResults([]);
-    }
-  }, [searchQuery, selectedVehicle]);
-
-  const fetchData = () => {
-    setLoading(true);
-    fetch(`${API_URL}/api/routes-by-vehicle`, { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => {
-        setRoutes(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Ошибка загрузки:', err);
+        console.error("Ошибка загрузки маршрутов:", err);
         setLoading(false);
       });
   };
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    setLoginError('');
-    const query = loginInput.trim().toLowerCase();
-
-    if (!query) {
-      setLoginError('Пожалуйста, введите номер авто');
-      return;
-    }
-
-    if (query === ADMIN_PIN) {
+  const handleLogin = () => {
+    const pass = prompt("Введіть пароль адміністратора:");
+    if (pass === "1234") { // Замените при необходимости на ваш реальный пароль
       setAuthRole('ADMIN');
       localStorage.setItem('vegtam_role', 'ADMIN');
-      localStorage.removeItem('vegtam_vehicle');
-      const firstVehicle = Object.keys(routes)[0] || null;
-      setSelectedVehicle(firstVehicle);
-      return;
-    }
-
-    const vehicles = Object.keys(routes);
-    const matchedVehicle = vehicles.find((v) => 
-      v.toLowerCase().includes(query) || query.includes(v.toLowerCase().replace(/\s+/g, ''))
-    );
-
-    if (matchedVehicle) {
-      setAuthRole('DRIVER');
-      setAssignedVehicle(matchedVehicle);
-      localStorage.setItem('vegtam_role', 'DRIVER');
-      localStorage.setItem('vegtam_vehicle', matchedVehicle);
-    } else {
-      setLoginError(`Автомобиль с номером "${loginInput}" не найден в маршрутах на сегодня.`);
+      alert("Авторизовано як Адміністратор!");
+    } else if (pass !== null) {
+      alert("Невірний пароль!");
     }
   };
 
   const handleLogout = () => {
     setAuthRole(null);
-    setAssignedVehicle(null);
-    setSelectedVehicle(null);
-    setLoginInput('');
     localStorage.removeItem('vegtam_role');
-    localStorage.removeItem('vegtam_vehicle');
   };
 
-  const handleNotifyDrivers = () => {
-    if (!window.confirm("Разослать сегодняшний маршрут экипажам в Telegram?")) {
-      return;
-    }
-
-    setNotifying(true);
-    fetch(`${API_URL}/api/notify-drivers`, { method: 'POST' })
-      .then((res) => res.json())
-      .then((res) => {
-        setNotifying(false);
-        if (res.status === 'success') {
-          alert(`Успешно! Найдено экипажей: ${res.found_crews}. Отправлено сообщений: ${res.notified_users}`);
-        } else {
-          alert(`Ошибка рассылки: ${res.message || 'Неизвестная ошибка'}`);
-        }
-      })
-      .catch((err) => {
-        setNotifying(false);
-        alert(`Ошибка подключения к серверу: ${err.message}`);
-      });
-  };
-
-  const handleOpenDetails = (docNum, isPickupCash) => {
-    if (!docNum) return;
-    setActiveDetailsDoc(docNum);
-    setIsCurrentDocPickupCash(isPickupCash);
+  // Детали по документу
+  const openDocDetails = (docId) => {
+    setSelectedDoc(docId);
     setDetailsLoading(true);
-    setDetailsData(null);
-
-    fetch(`${API_URL}/api/delivery-details/${docNum}`, { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => {
-        setDetailsData(data);
+    fetch(`${API_URL}/api/delivery-details/${docId}`)
+      .then(res => res.json())
+      .then(data => {
+        setDocDetails(data.items || []);
         setDetailsLoading(false);
       })
-      .catch((err) => {
-        console.error('Ошибка загрузки деталей:', err);
+      .catch(err => {
+        console.error("Ошибка загрузки деталей:", err);
         setDetailsLoading(false);
       });
   };
 
-  const handleCloseDetails = () => {
-    setActiveDetailsDoc(null);
-    setDetailsData(null);
-    setIsCurrentDocPickupCash(false);
-  };
-
-  const handleSelectVehicle = (vehicle) => {
-    setSearchQuery('');
-    setArchiveResults([]);
-    if (selectedVehicle === vehicle) {
-      setSelectedVehicle(null);
-    } else {
-      setSelectedVehicle(null);
-      setTimeout(() => {
-        setSelectedVehicle(vehicle);
-      }, 50);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="loader-container notranslate" translate="no">
-        <div className="loader-box">
-          <img src="/logo192.png" alt="VEGTAM" className="loader-logo" onError={(e) => { e.target.src = '/favicon.ico'; }} />
-          <div className="custom-speedometer">
-            <img src="/speedometer-bg.jpg" alt="Speedometer" className="speedometer-img" />
-            <div className="speedometer-real-needle"></div>
-            <div className="speedometer-real-center"></div>
-          </div>
-          <div className="loader-text">Загрузка маршрутов...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!authRole) {
-    return (
-      <div className="container notranslate" translate="no" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-        <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '30px 20px', width: '100%', maxWidth: '400px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', textAlign: 'center' }}>
-          <img src="/logo192.png" alt="VEGTAM" style={{ width: '70px', marginBottom: '10px' }} onError={(e) => { e.target.src = '/favicon.ico'; }} />
-          <h2 style={{ margin: '0 0 20px 0', color: '#2c3e50' }}>VEGTAM LOGISTICS</h2>
-          
-          <form onSubmit={handleLogin}>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '8px', textAlign: 'left', fontWeight: 'bold' }}>
-                Введите номер авто:
-              </label>
-              <input
-                type="text"
-                placeholder="Например: AI6543PX"
-                value={loginInput}
-                onChange={(e) => setLoginInput(e.target.value)}
-                style={{
-                  width: '100%', padding: '14px', fontSize: '18px', borderRadius: '8px',
-                  border: '2px solid #007bff', textAlign: 'center', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box'
-                }}
-                autoFocus
-              />
-            </div>
-
-            {loginError && (
-              <div style={{ color: '#dc3545', fontSize: '14px', marginBottom: '15px', backgroundColor: '#f8d7da', padding: '10px', borderRadius: '6px' }}>
-                {loginError}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              style={{
-                width: '100%', padding: '14px', backgroundColor: '#007bff', color: '#fff',
-                border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer'
-              }}
-            >
-              🚚 Войти в маршрут
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  const vehicles = Object.keys(routes);
-
-  const allPoints = [];
-  Object.entries(routes).forEach(([vehicle, points]) => {
-    if (Array.isArray(points)) {
-      points.forEach((point) => {
-        allPoints.push({ ...point, _vehicle: vehicle });
+  // График работы на завтра
+  const fetchSchedule = () => {
+    setScheduleLoading(true);
+    setIsScheduleOpen(true);
+    fetch(`${API_URL}/api/month-schedule`)
+      .then(res => res.json())
+      .then(data => {
+        setScheduleData(data);
+        setScheduleLoading(false);
+      })
+      .catch(err => {
+        console.error("Ошибка загрузки графика:", err);
+        setScheduleLoading(false);
       });
-    }
-  });
+  };
 
-  const filteredPoints = searchQuery.trim() === '' 
-    ? [] 
-    : allPoints.filter((point) => {
-        const query = searchQuery.toLowerCase().trim();
-        return Object.values(point).some((val) =>
-          String(val).toLowerCase().includes(query)
-        );
+  // Справочник контактов ТТ
+  const fetchContacts = () => {
+    setContactsLoading(true);
+    setIsContactsOpen(true);
+    fetch(`${API_URL}/api/tt-contacts`)
+      .then(res => res.json())
+      .then(data => {
+        setContactsData(data.contacts || []);
+        setContactsLoading(false);
+      })
+      .catch(err => {
+        console.error("Ошибка загрузки контактов:", err);
+        setContactsLoading(false);
       });
-
-  const getValFromPoint = (point, possibleNames) => {
-    const keys = Object.keys(point).filter((k) => !k.startsWith('_'));
-    for (const name of possibleNames) {
-      const target = name.toLowerCase();
-      for (const key of keys) {
-        const cleanKey = key.trim().toLowerCase();
-        if (cleanKey === target || cleanKey.includes(target)) {
-          const val = String(point[key]).trim();
-          if (val) return val;
-        }
-      }
-    }
-    return '';
   };
 
-  const getSortedPoints = (pointsArray) => {
-    if (!Array.isArray(pointsArray)) return [];
-    
-    return [...pointsArray].sort((a, b) => {
-      const boA = getValFromPoint(a, ['код бо', 'кодбо', 'код б.о.', 'бо']);
-      const boB = getValFromPoint(b, ['код бо', 'кодбо', 'код б.о.', 'бо']);
-
-      if (!boA && !boB) return 0;
-      if (!boA) return 1;
-      if (!boB) return -1;
-
-      return boA.localeCompare(boB, undefined, { numeric: true, sensitivity: 'base' });
-    });
+  // Статистика по автомобилям
+  const fetchStatistics = () => {
+    setStatsLoading(true);
+    setIsStatsOpen(true);
+    fetch(`${API_URL}/api/statistics/deliveries-by-vehicle`)
+      .then(res => res.json())
+      .then(data => {
+        setStatsData(data.stats || {});
+        setStatsLoading(false);
+      })
+      .catch(err => {
+        console.error("Ошибка загрузки статистики:", err);
+        setStatsLoading(false);
+      });
   };
 
-  const parseNum = (strVal) => {
-    if (!strVal) return 0;
-    const cleaned = String(strVal).replace(',', '.').replace(/[^0-9.]/g, '');
-    const num = parseFloat(cleaned);
-    return isNaN(num) ? 0 : num;
-  };
-
-  const calculateTotals = (pointsArray) => {
-    if (!Array.isArray(pointsArray)) return { count: 0, weight: 0, volume: 0 };
-    
-    let totalWeight = 0;
-    let totalVolume = 0;
-
-    pointsArray.forEach((point) => {
-      const weightStr = getValFromPoint(point, ['вага']);
-      const volumeStr = getValFromPoint(point, ['об\'єм', 'обем', 'объем']);
-
-      totalWeight += parseNum(weightStr);
-      totalVolume += parseNum(volumeStr);
-    });
-
-    return {
-      count: pointsArray.length,
-      weight: Math.round(totalWeight * 100) / 100,
-      volume: Math.round(totalVolume * 100) / 100,
-    };
-  };
-
-  const renderCard = (point, idx, showVehicleBadge = false) => {
-    const docNum = getValFromPoint(point, ['№ док-ту', '№ док', 'док-ту', 'номер док']);
-    const city = getValFromPoint(point, ['факт.місто доставки', 'місто', 'город']);
-    const street = getValFromPoint(point, ['вулиця', 'улица']);
-    const house = getValFromPoint(point, ['№ будинку', 'будинок', 'дом']);
-    const client = getValFromPoint(point, ['клиент', 'отримувач', 'получатель', 'замовник', 'контрагент', 'фирма']);
-    const phone = getValFromPoint(point, ['телефон', 'тел', 'контакт']);
-    const weight = getValFromPoint(point, ['вага']);
-    const volume = getValFromPoint(point, ['об\'єм', 'обем', 'объем']);
-    const warehouse = getValFromPoint(point, ['склад']);
-    const driver = getValFromPoint(point, ['водій', 'водитель']);
-    const boCode = getValFromPoint(point, ['код бо', 'кодбо', 'код б.о.', 'бо']);
-    
-    const payment = getValFromPoint(point, ['оплата']);
-    const note = getValFromPoint(point, ['примітка', 'примечание', 'примитка']);
-
-    const noteLower = String(note).toLowerCase();
-    const paymentLower = String(payment).toLowerCase();
-
-    const hasPickup = noteLower.includes('pick-up') || noteLower.includes('pickup');
-    const isNonCash = paymentLower.includes('б/г') || 
-                      paymentLower.includes('б/готівк') || 
-                      paymentLower.includes('безгот') || 
-                      paymentLower.includes('картк') || 
-                      paymentLower.includes('карта');
-
-    const isCash = (paymentLower.includes('готівк') || paymentLower.includes('налич')) && !isNonCash;
-    const isPickupCash = hasPickup && isCash;
-
-    const addressParts = [city, street, house ? `д. ${house}` : ''].filter(Boolean);
-    const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'Адрес не указан';
-
-    return (
-      <div 
-        key={`${point._vehicle || 'v'}-${idx}-${docNum}`} 
-        className={`card ${isPickupCash ? 'card-pickup-cash' : ''}`}
-      >
-        {isPickupCash && (
-          <div className="pickup-banner">
-            💵 PICK-UP (ГОТІВКОВИЙ)
-          </div>
-        )}
-
-        <div className="card-header">
-          {showVehicleBadge ? (
-            <span className="badge-vehicle">
-              🚗 {point._vehicle === 'Без номера авто' ? (
-                'Без номера'
-              ) : (
-                <span className="license-plate">{point._vehicle}</span>
-              )}
-            </span>
-          ) : (
-            <span className="point-number">#{idx + 1}</span>
-          )}
-          {docNum && <span className="doc-num">📄 Док: {docNum}</span>}
-        </div>
-
-        {client && <h3>{client}</h3>}
-
-        <p>📍 <strong>Адрес:</strong> {fullAddress}</p>
-
-        {phone && (
-          <p>📞 <strong>Тел:</strong> <a href={`tel:${phone}`}>{phone}</a></p>
-        )}
-
-        {(weight || volume) && (
-          <p>📦 <strong>Параметры:</strong> {weight ? `Вага: ${weight} кг` : ''} {volume ? `| Об'єм: ${volume} м³` : ''}</p>
-        )}
-
-        {isPickupCash && (
-          <p>💳 <strong>Оплата:</strong> {payment} {note ? `| Примітка: ${note}` : ''}</p>
-        )}
-
-        {(warehouse || driver) && (
-          <p>ℹ️ {warehouse ? `Склад: ${warehouse}` : ''} {driver ? `| Водій: ${driver}` : ''}</p>
-        )}
-
-        {boCode && (
-          <p>🏢 <strong>Код БО:</strong> {boCode}</p>
-        )}
-
-        <div className="card-actions" style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-          {fullAddress !== 'Адрес не указан' && (
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-map"
-              style={{ flex: 1, textAlign: 'center', textDecoration: 'none' }}
-            >
-              🗺️ Карта
-            </a>
-          )}
-
-          {docNum && (
-            <button
-              className="btn-details"
-              onClick={() => handleOpenDetails(docNum, isPickupCash)}
-              style={{
-                flex: 1,
-                backgroundColor: '#007bff',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '8px 12px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              📋 Детально
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const activeVehicleKey = authRole === 'DRIVER' ? assignedVehicle : selectedVehicle;
-  const currentPoints = activeVehicleKey && activeVehicleKey !== 'SEARCH' ? routes[activeVehicleKey] || [] : [];
-  const sortedCurrentPoints = getSortedPoints(currentPoints);
-  const totals = calculateTotals(currentPoints);
-
-  const filteredContacts = ttContacts.filter((contact) => {
-    const q = ttSearchQuery.toLowerCase().trim();
-    if (!q) return false;
-    return (
-      (contact.ttName && contact.ttName.toLowerCase().includes(q)) ||
-      (contact.address && contact.address.toLowerCase().includes(q)) ||
-      (contact.name && contact.name.toLowerCase().includes(q))
-    );
-  });
+  const filteredContacts = contactsData.filter(c => 
+    (c.ttName && c.ttName.toLowerCase().includes(contactSearch.toLowerCase())) ||
+    (c.address && c.address.toLowerCase().includes(contactSearch.toLowerCase())) ||
+    (c.phone && c.phone.includes(contactSearch))
+  );
 
   return (
-    <div className="container notranslate" translate="no">
-      <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>
-          <img src="/logo192.png" alt="Icon" className="header-app-icon" onError={(e) => { e.target.src = '/favicon.ico'; }} />
-          VEGTAM
-        </h1>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button
-            onClick={() => setIsContactsOpen(true)}
-            style={{
-              backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '6px',
-              padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
-            }}
+    <div className="App" style={{ fontFamily: 'sans-serif', backgroundColor: '#f4f6f8', minHeight: '100vh', paddingBottom: '40px' }}>
+      
+      {/* Шапка приложения */}
+      <header style={{ backgroundColor: '#1e293b', color: '#fff', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ margin: 0, fontSize: '20px' }}>🚚 VEGTAM LOGISTICS</h2>
+        
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button 
+            onClick={fetchSchedule}
+            style={{ backgroundColor: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            📅 Графік роботи
+          </button>
+
+          <button 
+            onClick={fetchContacts}
+            style={{ backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}
           >
             📇 Контакти ТТ
           </button>
 
-          <button
-            onClick={fetchMonthSchedule}
-            style={{
-              backgroundColor: '#6f42c1', color: '#fff', border: 'none', borderRadius: '6px',
-              padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
-            }}
-          >
-            📅 Графік
-          </button>
-
           {authRole === 'ADMIN' && (
-            <button
-              onClick={handleNotifyDrivers}
-              disabled={notifying}
-              style={{
-                backgroundColor: '#17a2b8', color: '#fff', border: 'none', borderRadius: '6px',
-                padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
-              }}
+            <button 
+              onClick={fetchStatistics}
+              style={{ backgroundColor: '#fd7e14', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}
             >
-              {notifying ? '⏳ Отправка...' : '📢 Оповестить'}
+              📊 Статистика
             </button>
           )}
-          <button 
-            onClick={handleLogout}
-            style={{
-              backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '6px',
-              padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer'
-            }}
-          >
-            🚪 Выйти
-          </button>
+
+          {authRole === 'ADMIN' ? (
+            <button 
+              onClick={handleLogout}
+              style={{ backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              Вийти (Адмін)
+            </button>
+          ) : (
+            <button 
+              onClick={handleLogin}
+              style={{ backgroundColor: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              🔒 Увійти
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Стильный блок погоды под дизайн интерфейса */}
-      <div className="summary-card" style={{ padding: '15px 20px', marginBottom: '20px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <span style={{ fontSize: '32px' }}>🌤️</span>
-          <div>
-            <div style={{ fontSize: '12px', color: '#8c9ba5', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'bold' }}>
-              Погода на завтра (Киев)
-            </div>
-            <div style={{ fontSize: '16px', color: '#fff', fontWeight: '600', marginTop: '2px' }}>
-              {weather ? weather.desc : 'Загрузка прогноза...'}
-            </div>
-            {weather && (
-              <div style={{ fontSize: '12px', color: '#adb5bd', marginTop: '4px', display: 'flex', gap: '10px' }}>
-                <span>💧 Осадки: {weather.precipitationProbability}% ({weather.precipitationSum} мм)</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {weather && (
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#fff' }}>
-              {weather.tempMax > 0 ? `+${weather.tempMax}` : weather.tempMax}°C
-            </div>
-            <div style={{ fontSize: '12px', color: '#adb5bd' }}>
-              ночью {weather.tempMin > 0 ? `+${weather.tempMin}` : weather.tempMin}°C
-            </div>
-          </div>
-        )}
-      </div>
-
-      {authRole === 'ADMIN' && (
-        <div className="vehicle-selector">
-          {vehicles.map((v) => (
-            <button
-              key={v}
-              className={`btn-vehicle ${selectedVehicle === v ? 'active' : ''}`}
-              onClick={() => handleSelectVehicle(v)}
-            >
-              {v === 'Без номера авто' ? (
-                <span>🚗 Без номера</span>
-              ) : (
-                <span className="license-plate">{v}</span>
-              )}
-            </button>
-          ))}
-
-          <button
-            className={`btn-vehicle btn-search-tab ${selectedVehicle === 'SEARCH' ? 'active' : ''}`}
-            onClick={() => handleSelectVehicle('SEARCH')}
-          >
-            🔍 Поиск
+      {/* Основной контент (Маршруты) */}
+      <main style={{ maxWidth: '1200px', margin: '20px auto', padding: '0 15px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: 0, color: '#334155' }}>Маршрути за автомобілями</h3>
+          <button onClick={fetchRoutes} style={{ padding: '6px 14px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+            🔄 Оновити
           </button>
         </div>
-      )}
 
-      {authRole === 'ADMIN' && selectedVehicle === 'SEARCH' && (
-        <div className="search-section">
-          <div className="search-input-wrapper">
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Введите № документа, адрес, город..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-            />
-            {searchQuery && (
-              <button 
-                className="btn-clear-search" 
-                onClick={() => { setSearchQuery(''); setArchiveResults([]); }}
-                aria-label="Очистить поиск"
-              >
-                ✖
-              </button>
-            )}
-          </div>
-
-          <div className="points-list">
-            {filteredPoints.map((point, idx) => renderCard(point, idx, true))}
-
-            {searchingArchive && (
-              <div style={{ textAlign: 'center', color: '#666', padding: '15px' }}>🔍 Поиск в архиве...</div>
-            )}
-
-            {archiveResults.length > 0 && (
-              <div style={{ marginTop: '20px' }}>
-                <h3 style={{ color: '#fd7e14', borderBottom: '2px solid #fd7e14', paddingBottom: '5px' }}>
-                  📁 Найдено в Архиве ({archiveResults.length})
-                </h3>
-                {archiveResults.map((item, idx) => (
-                  <div key={idx} style={{ backgroundColor: '#fff3cd', border: '1px solid #ffeeba', borderRadius: '10px', padding: '15px', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontWeight: 'bold', color: '#856404' }}>
-                      <span>📅 Дата: {item.date}</span>
-                      <span>📄 Док: {item.doc_num}</span>
-                    </div>
-                    <p style={{ margin: '4px 0' }}>🚗 <strong>Водитель / Авто:</strong> {item.driver}</p>
-                    <p style={{ margin: '4px 0' }}>🏭 <strong>Откуда:</strong> {item.from}</p>
-                    <p style={{ margin: '4px 0' }}>📍 <strong>Куда:</strong> {item.to}</p>
-                    <p style={{ margin: '8px 0 0 0', backgroundColor: '#fff', padding: '8px', borderRadius: '6px', fontSize: '13px', color: '#333' }}>
-                      📦 <strong>Товары:</strong> {item.items}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchQuery.trim() !== '' && filteredPoints.length === 0 && archiveResults.length === 0 && !searchingArchive && (
-              <div className="no-results">Ничего не найдено в маршрутах на сегодня и в Архиве по запросу "{searchQuery}"</div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeVehicleKey && activeVehicleKey !== 'SEARCH' && (
-        <div className="points-list">
-          <h2>
-            Маршрут:{' '}
-            {activeVehicleKey === 'Без номера авто' ? (
-              'Без номера авто'
-            ) : (
-              <span className="license-plate">{activeVehicleKey}</span>
-            )}
-          </h2>
-
-          <div className="summary-card">
-            <div className="summary-item">
-              <span className="summary-label">📍 Точки</span>
-              <span className="summary-value">{totals.count}</span>
-            </div>
-            <div className="summary-divider"></div>
-            <div className="summary-item">
-              <span className="summary-label">⚖️ Общий вес</span>
-              <span className="summary-value">{totals.weight} кг</span>
-            </div>
-            <div className="summary-divider"></div>
-            <div className="summary-item">
-              <span className="summary-label">📐 Общий объём</span>
-              <span className="summary-value">{totals.volume} м³</span>
-            </div>
-          </div>
-
-          {sortedCurrentPoints.map((point, idx) => renderCard(point, idx, false))}
-        </div>
-      )}
-
-      {/* Модальное окно: Контакты ТТ */}
-      {isContactsOpen && (
-        <div className="modal-backdrop" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex',
-          justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px'
-        }}>
-          <div className="modal-content" style={{
-            backgroundColor: '#fff', borderRadius: '12px', width: '100%', maxWidth: '650px',
-            maxHeight: '90vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0, color: '#333' }}>📇 Справочник контактов ТТ</h3>
-              <button onClick={() => setIsContactsOpen(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#666' }}>✖</button>
-            </div>
-
-            <div className="search-input-wrapper" style={{ marginBottom: '15px' }}>
-              <input
-                type="text"
-                className="search-input"
-                placeholder="Введите название ТТ (например, Блокбастер)..."
-                value={ttSearchQuery}
-                onChange={(e) => setTtSearchQuery(e.target.value)}
-                autoFocus
-                style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '8px', border: '2px solid #28a745', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            {contactsLoading ? (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Загрузка базы контактов...</div>
-            ) : ttSearchQuery.trim() === '' ? (
-              <div style={{ textAlign: 'center', padding: '30px', color: '#888' }}>
-                Введите название торговой точки в поиск выше, чтобы увидеть контакты.
-              </div>
-            ) : filteredContacts.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {filteredContacts.map((c, i) => (
-                  <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '12px', backgroundColor: '#f8f9fa' }}>
-                    <div style={{ fontWeight: 'bold', color: '#2c3e50', fontSize: '15px', marginBottom: '4px' }}>
-                      🏢 {c.ttName || 'ТТ без названия'}
-                    </div>
-                    {c.address && <div style={{ fontSize: '13px', color: '#666', marginBottom: '6px' }}>📍 {c.address}</div>}
-                    <div style={{ fontSize: '14px', color: '#333', marginTop: '6px', borderTop: '1px solid #ddd', paddingTop: '6px' }}>
-                      👤 <strong>{c.name || '—'}</strong> ({c.position || 'Сотрудник'})
-                    </div>
-                    <div style={{ fontSize: '15px', color: '#007bff', fontWeight: 'bold', marginTop: '4px' }}>
-                      📞 Тел: <a href={`tel:${c.phone}`} style={{ color: '#007bff', textDecoration: 'none' }}>{c.phone || 'Нет телефона'}</a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
-                По запросу "{ttSearchQuery}" ничего не найдено.
-              </div>
-            )}
-
-            <button 
-              onClick={() => setIsContactsOpen(false)}
-              style={{
-                width: '100%', marginTop: '20px', padding: '12px', backgroundColor: '#6c757d',
-                color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
-              }}
-            >
-              Закрыть
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Модальное окно: График смен на завтра (разделено на Водителей и Экспедиторов по фамилиям) */}
-      {isScheduleModalOpen && (
-        <div className="modal-backdrop" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex',
-          justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px'
-        }}>
-          <div className="modal-content" style={{
-            backgroundColor: '#fff', borderRadius: '12px', width: '100%', maxWidth: '600px',
-            maxHeight: '90vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0, color: '#333' }}>📅 Графік роботи на завтра ({monthScheduleData?.date || '...'})</h3>
-              <button onClick={() => setIsScheduleModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#666' }}>✖</button>
-            </div>
-
-            {scheduleLoading ? (
-              <div style={{ textAlign: 'center', padding: '30px', color: '#666' }}>Загрузка графика смен...</div>
-            ) : monthScheduleData ? (
-              <div>
-                {/* Секция Водителей */}
-                <h4 style={{ color: '#007bff', borderBottom: '2px solid #007bff', paddingBottom: '4px', marginTop: '5px' }}>
-                  🚗 Водії ({monthScheduleData.drivers?.length || 0})
-                </h4>
-                {monthScheduleData.drivers && monthScheduleData.drivers.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '15px' }}>
-                    {monthScheduleData.drivers.map((d, i) => (
-                      <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px', backgroundColor: '#f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontWeight: 'bold', color: '#2c3e50', fontSize: '15px' }}>👤 {d.fio}</div>
-                        {d.auto ? (
-                          <span className="license-plate" style={{ fontSize: '14px', padding: '4px 8px', backgroundColor: '#e2e3e5', borderRadius: '6px' }}>{d.auto}</span>
-                        ) : (
-                          <span style={{ fontSize: '12px', color: '#888' }}>Без авто</span>
-                        )}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Завантаження маршрутів...</div>
+        ) : Object.keys(routes).length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Актуальних маршрутів не знайдено.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+            {Object.entries(routes).map(([vehicle, rows]) => (
+              <div key={vehicle} style={{ backgroundColor: '#fff', borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', padding: '15px', borderTop: '4px solid #3b82f6' }}>
+                <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e293b', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>🚗 {vehicle}</span>
+                  <span style={{ fontSize: '12px', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '10px' }}>{rows. точек или точек / доставок?} точок</span>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {rows.map((row, idx) => (
+                    <div key={idx} style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <strong>Док: 
+                          <span 
+                            onClick={() => openDocDetails(row['№ док-ту'] || row['№ док'])} 
+                            style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline', marginLeft: '4px' }}
+                          >
+                            {row['№ док-ту'] || row['№ док'] || '—'}
+                          </span>
+                        </strong>
+                        <span style={{ color: '#64748b' }}>{row['Звідки'] || row['Склад'] || ''}</span>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ color: '#888', fontSize: '14px', marginBottom: '15px' }}>Нет работающих водителей на завтра.</div>
-                )}
-
-                {/* Секция Экспедиторов */}
-                <h4 style={{ color: '#28a745', borderBottom: '2px solid #28a745', paddingBottom: '4px', marginTop: '15px' }}>
-                  📦 Експедитори ({monthScheduleData.expeditors?.length || 0})
-                </h4>
-                {monthScheduleData.expeditors && monthScheduleData.expeditors.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {monthScheduleData.expeditors.map((e, i) => (
-                      <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px', backgroundColor: '#f8f9fa' }}>
-                        <div style={{ fontWeight: 'bold', color: '#2c3e50', fontSize: '15px' }}>👤 {e.fio}</div>
+                      <div style={{ color: '#334155' }}>
+                        📍 <strong>Куди:</strong> {[row['Факт.місто доставки'], row['Вулиця'], row['№ будинку']].filter(Boolean.join(', ') || '—'}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ color: '#888', fontSize: '14px' }}>Нет работающих экспедиторов на завтра.</div>
-                )}
+                    </div>
+                  ))}
+                </div>
               </div>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Модальное окно: Детали документа */}
+      {selectedDoc && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '10px', width: '100%', maxWidth: '600px', maxHeight: '85vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#1e293b' }}>Деталі документа № {selectedDoc}</h3>
+              <button onClick={() => setSelectedDoc(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✖</button>
+            </div>
+
+            {detailsLoading ? (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>Завантаження товару...</div>
+            ) : docDetails.length > 0 ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f1f5f9', textAlign: 'left' }}>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #cbd5e1' }}>Найменування</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #cbd5e1' }}>К-сть</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #cbd5e1' }}>Сума</th>
+                    <th style={{ padding: '8px', borderBottom: '1px solid #cbd5e1' }}>Отримувач</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {docDetails.map((item, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '8px' }}>{item.name}</td>
+                      <td style={{ padding: '8px' }}>{item.quantity}</td>
+                      <td style={{ padding: '8px' }}>{item.price} грн</td>
+                      <td style={{ padding: '8px' }}>{item.recipient}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : (
-              <div style={{ textAlign: 'center', padding: '30px', color: '#888' }}>Не удалось загрузить данные графика.</div>
+              <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>Товари не знайдено для цього документа.</div>
             )}
 
-            <button 
-              onClick={() => setIsScheduleModalOpen(false)}
-              style={{
-                width: '100%', marginTop: '20px', padding: '12px', backgroundColor: '#6c757d',
-                color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
-              }}
-            >
+            <button onClick={() => setSelectedDoc(null)} style={{ width: '100%', marginTop: '20px', padding: '10px', backgroundColor: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
               Закрити
             </button>
           </div>
         </div>
       )}
 
-      {/* Модальное окно: Детали документа */}
-      {activeDetailsDoc && (
-        <div className="modal-backdrop" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex',
-          justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px'
-        }}>
-          <div className="modal-content" style={{
-            backgroundColor: '#fff', borderRadius: '12px', width: '100%', maxWidth: '600px',
-            maxHeight: '90vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0, color: '#333' }}>📦 Детали документа № {activeDetailsDoc}</h3>
-              <button onClick={handleCloseDetails} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#666' }}>✖</button>
+      {/* Модальное окно: График работы */}
+      {isScheduleOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '10px', width: '100%', maxWidth: '550px', maxHeight: '85vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#1e293b' }}>📅 Графік роботи на завтра ({scheduleData?.date || ''})</h3>
+              <button onClick={() => setIsScheduleOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✖</button>
             </div>
 
-            {detailsLoading ? (
-              <div style={{ textAlign: 'center', padding: '30px', color: '#666' }}>Загрузка позиций...</div>
-            ) : detailsData && detailsData.items && detailsData.items.length > 0 ? (
-              <div>
-                <div style={{ marginBottom: '15px', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '8px' }}>
-                  <p style={{ margin: '4px 0' }}>👤 <strong>Отримувач:</strong> {detailsData.items[0].recipient}</p>
-                  <p style={{ margin: '4px 0' }}>📍 <strong>Пункт доставки:</strong> {detailsData.items[0].delivery_point}</p>
-                </div>
-
-                <h4 style={{ margin: '15px 0 10px 0' }}>Товары в заказе:</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {detailsData.items.map((item, i) => (
-                    <div key={i} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px', backgroundColor: '#fff' }}>
-                      <div style={{ fontWeight: 600, color: '#2c3e50', marginBottom: '4px' }}>{item.name}</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#555' }}>
-                        <span>Кол-во: <strong>{item.quantity} шт.</strong></span>
-                        {isCurrentDocPickupCash && (
-                          <span style={{ color: '#28a745', fontWeight: 'bold' }}>{item.price} грн</span>
-                        )}
-                      </div>
+            {scheduleLoading ? (
+              <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Читання графіку з таблиці...</div>
+            ) : scheduleData ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div>
+                  <h4 style={{ color: '#0369a1', margin: '0 0 8px 0' }}>🚗 Водії ({scheduleData.drivers?.length || 0})</h4>
+                  {scheduleData.drivers?.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {scheduleData.drivers.map((d, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '14px' }}>
+                          <span>👤 {d.fio}</span>
+                          <strong style={{ color: '#2563eb' }}>{d.auto || 'Без авто'}</strong>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div style={{ color: '#64748b', fontSize: '13px' }}>Немає працюючих водіїв на завтра.</div>
+                  )}
                 </div>
 
-                {isCurrentDocPickupCash && (
-                  <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '2px solid #eee', display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 'bold' }}>
-                    <span>Итого к оплате наличными:</span>
-                    <span style={{ color: '#28a745' }}>
-                      {detailsData.items.reduce((sum, item) => sum + parseNum(item.price), 0)} грн
-                    </span>
-                  </div>
-                )}
+                <div>
+                  <h4 style={{ color: '#047857', margin: '0 0 8px 0' }}>📦 Експедитори ({scheduleData.expeditors?.length || 0})</h4>
+                  {scheduleData.expeditors?.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {scheduleData.expeditors.map((e, idx) => (
+                        <div key={idx} style={{ backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '14px' }}>
+                          <span>👤 {e.fio}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ color: '#64748b', fontSize: '13px' }}>Немає працюючих експедиторів на завтра.</div>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>Товары не найдены для данного документа.</div>
-            )}
+            ) : null}
 
-            <button 
-              onClick={handleCloseDetails}
-              style={{
-                width: '100%', marginTop: '20px', padding: '12px', backgroundColor: '#6c757d',
-                color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
-              }}
-            >
-              Закрыть
+            <button onClick={() => setIsScheduleOpen(false)} style={{ width: '100%', marginTop: '20px', padding: '10px', backgroundColor: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+              Закрити
             </button>
           </div>
         </div>
       )}
+
+      {/* Модальное окно: Контакты ТТ */}
+      {isContactsOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '10px', width: '100%', maxWidth: '700px', maxHeight: '85vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#1e293b' }}>📇 Довідник контактів ТТ</h3>
+              <button onClick={() => setIsContactsOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✖</button>
+            </div>
+
+            <input 
+              type="text" 
+              placeholder="🔍 Пошук за назвою ТТ, адресою або телефоном..." 
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+              style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box', fontSize: '14px' }}
+            />
+
+            {contactsLoading ? (
+              <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Завантаження контактів...</div>
+            ) : filteredContacts.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '50vh', overflowY: 'auto' }}>
+                {filteredContacts.map((c, i) => (
+                  <div key={i} style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}>
+                    <div style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '14px', marginBottom: '4px' }}>{c.ttName || 'Без назви ТТ'}</div>
+                    <div style={{ color: '#475569', marginBottom: '2px' }}>📍 <strong>Адреса:</strong> {c.address || '—'}</div>
+                    <div style={{ color: '#475569', marginBottom: '2px' }}>👤 <strong>Контакт:</strong> {c.name || '—'} {c.position ? `(${c.position})` : ''}</div>
+                    <div style={{ color: '#2563eb' }}>📞 <strong>Тел:</strong> <a href={`tel:${c.phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{c.phone || '—'}</a></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Контактов не знайдено.</div>
+            )}
+
+            <button onClick={() => setIsContactsOpen(false)} style={{ width: '100%', marginTop: '20px', padding: '10px', backgroundColor: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+              Закрити
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно: Статистика доставок */}
+      {isStatsOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '10px', width: '100%', maxWidth: '650px', maxHeight: '85vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#1e293b' }}>📊 Статистика доставок по авто</h3>
+              <button onClick={() => setIsStatsOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✖</button>
+            </div>
+
+            {statsLoading ? (
+              <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Розрахунок статистики з архіву...</div>
+            ) : statsData && Object.keys(statsData).length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: '55vh', overflowY: 'auto' }}>
+                {Object.entries(statsData).map(([vehicle, months]) => (
+                  <div key={vehicle} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', backgroundColor: '#f8fafc' }}>
+                    <div style={{ fontWeight: 'bold', color: '#2563eb', fontSize: '15px', marginBottom: '8px' }}>
+                      🚗 {vehicle}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {Object.entries(months).map(([month, count]) => (
+                        <div key={month} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>
+                          <span style={{ color: '#475569' }}>📅 Місяць ({month}):</span>
+                          <strong style={{ color: '#16a34a' }}>{count} доставок</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>В архіві поки немає даних для статистики.</div>
+            )}
+
+            <button onClick={() => setIsStatsOpen(false)} style={{ width: '100%', marginTop: '20px', padding: '10px', backgroundColor: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+              Закрити
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
