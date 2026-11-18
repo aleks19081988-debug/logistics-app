@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Замените на ваш URL бэкенда на Render или оставьте относительный, если настроено
 const API_URL = "https://your-backend-url.onrender.com"; 
 
 function App() {
@@ -23,7 +22,7 @@ function App() {
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
 
-  // Новые состояния для Статистики
+  // Статистика доставок
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [statsData, setStatsData] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -48,7 +47,7 @@ function App() {
 
   const handleLogin = () => {
     const pass = prompt("Введіть пароль адміністратора:");
-    if (pass === "1234") { // Замените при необходимости на ваш реальный пароль
+    if (pass === "1234") {
       setAuthRole('ADMIN');
       localStorage.setItem('vegtam_role', 'ADMIN');
       alert("Авторизовано як Адміністратор!");
@@ -62,7 +61,6 @@ function App() {
     localStorage.removeItem('vegtam_role');
   };
 
-  // Детали по документу
   const openDocDetails = (docId) => {
     setSelectedDoc(docId);
     setDetailsLoading(true);
@@ -78,7 +76,6 @@ function App() {
       });
   };
 
-  // График работы на завтра
   const fetchSchedule = () => {
     setScheduleLoading(true);
     setIsScheduleOpen(true);
@@ -94,7 +91,6 @@ function App() {
       });
   };
 
-  // Справочник контактов ТТ
   const fetchContacts = () => {
     setContactsLoading(true);
     setIsContactsOpen(true);
@@ -110,7 +106,6 @@ function App() {
       });
   };
 
-  // Статистика по автомобилям
   const fetchStatistics = () => {
     setStatsLoading(true);
     setIsStatsOpen(true);
@@ -181,7 +176,7 @@ function App() {
         </div>
       </header>
 
-      {/* Основной контент (Маршруты) */}
+      {/* Основной контент */}
       <main style={{ maxWidth: '1200px', margin: '20px auto', padding: '0 15px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3 style={{ margin: 0, color: '#334155' }}>Маршрути за автомобілями</h3>
@@ -200,7 +195,7 @@ function App() {
               <div key={vehicle} style={{ backgroundColor: '#fff', borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', padding: '15px', borderTop: '4px solid #3b82f6' }}>
                 <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e293b', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
                   <span>🚗 {vehicle}</span>
-                  <span style={{ fontSize: '12px', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '10px' }}>{rows. точек или точек / доставок?} точок</span>
+                  <span style={{ fontSize: '12px', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '10px' }}>{rows.length} точок</span>
                 </div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -218,7 +213,7 @@ function App() {
                         <span style={{ color: '#64748b' }}>{row['Звідки'] || row['Склад'] || ''}</span>
                       </div>
                       <div style={{ color: '#334155' }}>
-                        📍 <strong>Куди:</strong> {[row['Факт.місто доставки'], row['Вулиця'], row['№ будинку']].filter(Boolean.join(', ') || '—'}
+                        📍 <strong>Куди:</strong> {[row['Факт.місто доставки'], row['Вулиця'], row['№ будинку']].filter(Boolean).join(', ') || '—'}
                       </div>
                     </div>
                   ))}
@@ -356,7 +351,7 @@ function App() {
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Контактов не знайдено.</div>
+              <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Контактів не знайдено.</div>
             )}
 
             <button onClick={() => setIsContactsOpen(false)} style={{ width: '100%', marginTop: '20px', padding: '10px', backgroundColor: '#64748b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
