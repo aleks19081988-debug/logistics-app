@@ -21,7 +21,8 @@ ARCHIVE_GID = "89786043"
 SCHEDULE_GID = "1663850532"
 STAFF_GID = "2037633890"
 TT_CONTACTS_GID = "2000504995"
-MONTH_SCHEDULE_GID = "981949435"
+MONTH_SCHEDULE_GID = "981949435"     # Вкладка с водителями
+EXPEDITOR_SCHEDULE_GID = "983262069" # Вкладка с экспедиторами
 
 TELEGRAM_BOT_TOKEN = "8981440107:AAGVTEmTGsk5j0_paOxxUa0EuWwQY_pSvIc"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDzUce63R419DyS9aQflRkHFvfrTd_-gtZ9MchVZkqAOIrEt6I4VtBqQnY_4gegspmCg/exec"
@@ -228,77 +229,85 @@ def get_tt_contacts():
 
 @app.get("/api/month-schedule")
 def get_month_schedule():
-    """Считывает месячный график (gid=981949435) с двумя параллельными таблицами (Водители и Экспедиторы)"""
+    """Считывает график водителей (gid=981949435) и экспедиторов (gid=983262069) с двух разных вкладок"""
     try:
-        data = get_sheet_data(gid=MONTH_SCHEDULE_GID)
-        if not data or len(data) < 4:
-            return {"status": "error", "message": "График не найден", "drivers": [], "expeditors": []}
-
         tomorrow = datetime.date.today() + datetime.timedelta(days=1)
         target_day_str = str(tomorrow.day)
 
-        day_col_indices = []
-        header_row_idx = -1
-
-        for r_idx, row in enumerate(data[:6]):
-            for c_idx, cell in enumerate(row):
-                val_clean = str(cell).strip()
-                if val_clean.endswith(".0"):
-                    val_clean = val_clean[:-2]
-                if val_clean == target_day_str:
-                    day_col_indices.append(c_idx)
-                    header_row_idx = r_idx
-
-        if not day_col_indices:
-            return {
-                "status": "success", 
-                "date": tomorrow.strftime("%d.%m.%Y"),
-                "drivers": [],
-                "expeditors": [],
-                "message": f"День {target_day_str} не найден в шапке графика"
-            }
-
-        driver_day_col = day_col_indices[0]
-        exped_day_col = day_col_indices[1] if len(day_col_indices) > 1 else -1
-
         drivers_list = []
         expeditors_list = []
-        start_row = header_row_idx + 1 if header_row_idx != -1 else 4
 
-        for row in data[start_row:]:
-            # 1. Водители (левая таблица)
-            if len(row) > driver_day_col:
-                fio_drv = str(row[1]).strip() if len(row) > 1 else ""
-                if fio_drv and fio_drv.lower() not in ["nan", "none", "ф.и.о.", "п.і.о."]:
-                    status_drv = str(row[driver_day_col]).strip()
-                    if status_drv == "" or status_drv.lower() in ["nan", "none"]:
-                        auto_val = str(row[2]).strip() if len(row) > 2 else ""
-                        drivers_list.append({
-                            "fio": fio_drv,
-                            "auto": auto_val if auto_val.lower() not in ["nan", "none"] else ""
-                        })
+        # --- 1. СКАНИРУЕМ ВОДИТЕЛЕЙ ---
+        data_drivers = get_sheet_data(gid=MONTH_SCHEDULE_GID)
+        if data_drivers and len(data_drivers) >= 4:
+            day_col_drv = -1
+            header_row_drv = -1
 
-            # 2. Экспедиторы (правая таблица)
-            if exped_day_col != -1:
-                fio_exp = ""
-                for offset in [2, 3, 1, 4, 5]:
-                    col_idx = exped_day_col - offset
-                    if col_idx >= 0 and len(row) > col_idx:
-                        val = str(row[col_idx]).strip()
-                        if val and not val.isdigit() and val.lower() not in [
-                            "nan", "none", "ф.и.о.", "п.і.о.", "листопад", "грудень", "січень", 
-                            "0", "1", "р", "л", "с", "б", "в"
-                        ] and len(val) > 3:
-                            fio_exp = val
-                            break
+            for r_idx, row in enumerate(data_drivers[:6]):
+                for c_idx, cell in enumerate(row):
+                    val_clean = str(cell).strip()
+                    if val_clean.endswith(".0"):
+                        val_clean = val_clean[:-2]
+                    if val_clean == target_day_str:
+                        day_col_drv = c_idx
+                        header_row_drv = r_idx
+                        break
+                if day_col_drv != -1:
+                    break
 
-                if fio_exp:
-                    status_exp = str(row[exped_day_col]).strip()
-                    if status_exp == "" or status_exp.lower() in ["nan", "none"]:
-                        if not any(e["fio"] == fio_exp for e in expeditors_list):
-                            expeditors_list.append({
-                                "fio": fio_exp
-                            })
+            if day_col_drv != -1:
+                start_row = header_row_drv + 1 if header_row_drv != -1 else 4
+                for row in data_drivers[start_row:]:
+                    if len(row) > day_col_drv:
+                        fio = str(row[1]).strip() if len(row) > 1 else ""
+                        if fio and fio.lower() not in ["nan", "none", "ф.и.о.", "п.і.о."]:
+                            status = str(row[day_col_drv]).strip()
+                            if status == "" or status.lower() in ["nan", "none"]:
+                                auto = str(row[2]).strip() if len(row) > 2 else ""
+                                drivers_list.append({
+                                    "fio": fio,
+                                    "auto": auto if auto and auto.lower() not in ["nan", "none"] else ""
+                                })
+
+        # --- 2. СКАНИРУЕМ ЭКСПЕДИТОРОВ ---
+        data_expeditors = get_sheet_data(gid=EXPEDITOR_SCHEDULE_GID)
+        if data_expeditors and len(data_expeditors) >= 4:
+            day_col_exp = -1
+            header_row_exp = -1
+
+            for r_idx, row in enumerate(data_expeditors[:6]):
+                for c_idx, cell in enumerate(row):
+                    val_clean = str(cell).strip()
+                    if val_clean.endswith(".0"):
+                        val_clean = val_clean[:-2]
+                    if val_clean == target_day_str:
+                        day_col_exp = c_idx
+                        header_row_exp = r_idx
+                        break
+                if day_col_exp != -1:
+                    break
+
+            if day_col_exp != -1:
+                start_row_exp = header_row_exp + 1 if header_row_exp != -1 else 4
+                for row in data_expeditors[start_row_exp:]:
+                    if len(row) > day_col_exp:
+                        fio_exp = ""
+                        for idx in [1, 0, 2]:
+                            if len(row) > idx and str(row[idx]).strip():
+                                val = str(row[idx]).strip()
+                                if val and not val.isdigit() and val.lower() not in [
+                                    "nan", "none", "ф.и.о.", "п.і.о.", "листопад", "грудень", "січень"
+                                ]:
+                                    fio_exp = val
+                                    break
+
+                        if fio_exp:
+                            status_exp = str(row[day_col_exp]).strip()
+                            if status_exp == "" or status_exp.lower() in ["nan", "none"]:
+                                if not any(e["fio"] == fio_exp for e in expeditors_list):
+                                    expeditors_list.append({
+                                        "fio": fio_exp
+                                    })
 
         return {
             "status": "success",
@@ -307,7 +316,7 @@ def get_month_schedule():
             "expeditors": expeditors_list
         }
     except Exception as e:
-        print(f"❌ Ошибка получения месячного графика:", e)
+        print(f"❌ Ошибка получения раздельного графика:", e)
         return {"status": "error", "message": str(e), "drivers": [], "expeditors": []}
 
 
