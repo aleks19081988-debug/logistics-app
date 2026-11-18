@@ -228,7 +228,7 @@ def get_tt_contacts():
 
 @app.get("/api/month-schedule")
 def get_month_schedule():
-    """Считывает месячный график (gid=981949435) и определяет работающих на завтра"""
+    """Считывает месячный график (gid=981949435) и корректно разделяет Водителей и Экспедиторов"""
     try:
         data = get_sheet_data(gid=MONTH_SCHEDULE_GID)
         if not data or len(data) < 4:
@@ -264,12 +264,12 @@ def get_month_schedule():
         current_section = "drivers"
 
         for row in data:
-            row_str = " ".join([str(c).lower() for c in row])
+            row_full_text = "".join([str(c).lower() for c in row])
             
-            if "експедитори" in row_str or "экспедиторы" in row_str:
+            if any(word in row_full_text for word in ["експедитори", "экспедиторы"]):
                 current_section = "expeditors"
                 continue
-            elif "водії" in row_str or "водители" in row_str:
+            elif any(word in row_full_text for word in ["водії", "водители"]):
                 current_section = "drivers"
                 continue
 
