@@ -228,7 +228,7 @@ def get_tt_contacts():
 
 @app.get("/api/month-schedule")
 def get_month_schedule():
-    """Считывает месячный график (gid=981949435) и корректно разделяет Водителей и Экспедиторов"""
+    """Считывает месячный график (gid=981949435) и четко разделяет водителей и экспедиторов"""
     try:
         data = get_sheet_data(gid=MONTH_SCHEDULE_GID)
         if not data or len(data) < 4:
@@ -264,12 +264,12 @@ def get_month_schedule():
         current_section = "drivers"
 
         for row in data:
-            row_full_text = "".join([str(c).lower() for c in row])
-            
-            if any(word in row_full_text for word in ["експедитори", "экспедиторы"]):
+            row_text = " ".join([str(c).lower().strip() for c in row if str(c).strip()])
+
+            if any(w in row_text for w in ["експедитори", "экспедиторы", "експ"]):
                 current_section = "expeditors"
                 continue
-            elif any(word in row_full_text for word in ["водії", "водители"]):
+            elif any(w in row_text for w in ["водії", "водители", "вод"]):
                 current_section = "drivers"
                 continue
 
@@ -278,7 +278,11 @@ def get_month_schedule():
                 for idx in [1, 0, 2]:
                     if len(row) > idx and str(row[idx]).strip():
                         val = str(row[idx]).strip()
-                        if not val.isdigit() and val.lower() not in ["nan", "none", "ф.и.о.", "п.і.о.", "листопад", "грудень", "січень"]:
+                        if not val.isdigit() and val.lower() not in [
+                            "nan", "none", "ф.и.о.", "п.і.о.", "листопад", "грудень", "січень", 
+                            "жовтень", "вересень", "серпень", "липень", "червень", "травень", 
+                            "квітень", "березень", "лютий"
+                        ]:
                             fio = val
                             break
 
@@ -291,10 +295,10 @@ def get_month_schedule():
                 if is_working:
                     if current_section == "drivers":
                         auto = ""
-                        for a_idx in [2, 3, 4]:
+                        for a_idx in [2, 3, 4, 5]:
                             if len(row) > a_idx:
                                 a_val = str(row[a_idx]).strip()
-                                if a_val and a_val.lower() not in ["nan", "none"] and not a_val.isdigit():
+                                if a_val and a_val.lower() not in ["nan", "none"] and not a_val.isdigit() and len(a_val) > 2:
                                     auto = a_val
                                     break
                         drivers_list.append({
