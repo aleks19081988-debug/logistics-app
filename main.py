@@ -228,7 +228,7 @@ def get_tt_contacts():
 
 @app.get("/api/month-schedule")
 def get_month_schedule():
-    """Считывает месячный график (gid=981949435) и четко разделяет водителей и экспедиторов"""
+    """Считывает месячный график (gid=981949435) с двумя таблицами рядом (Водители слева, Экспедиторы справа)"""
     try:
         data = get_sheet_data(gid=MONTH_SCHEDULE_GID)
         if not data or len(data) < 4:
@@ -237,7 +237,8 @@ def get_month_schedule():
         tomorrow = datetime.date.today() + datetime.timedelta(days=1)
         target_day_str = str(tomorrow.day)
 
-        day_col_index = -1
+        day_col_indices = []
+        header_row_idx = -1
 
         for r_idx, row in enumerate(data[:6]):
             for c_idx, cell in enumerate(row):
@@ -245,12 +246,10 @@ def get_month_schedule():
                 if val_clean.endswith(".0"):
                     val_clean = val_clean[:-2]
                 if val_clean == target_day_str:
-                    day_col_index = c_idx
-                    break
-            if day_col_index != -1:
-                break
+                    day_col_indices.append(c_idx)
+                    header_row_idx = r_idx
 
-        if day_col_index == -1:
+        if not day_col_indices:
             return {
                 "status": "success", 
                 "date": tomorrow.strftime("%d.%m.%Y"),
@@ -259,56 +258,44 @@ def get_month_schedule():
                 "message": f"День {target_day_str} не найден в шапке графика"
             }
 
+        driver_day_col = day_col_indices[0]
+        exped_day_col = day_col_indices[1] if len(day_col_indices) > 1 else -1
+
         drivers_list = []
         expeditors_list = []
-        current_section = "drivers"
+        start_row = header_row_idx + 1 if header_row_idx != -1 else 4
 
-        for row in data:
-            row_text = " ".join([str(c).lower().strip() for c in row if str(c).strip()])
-
-            if any(w in row_text for w in ["експедитори", "экспедиторы", "експ"]):
-                current_section = "expeditors"
-                continue
-            elif any(w in row_text for w in ["водії", "водители", "вод"]):
-                current_section = "drivers"
-                continue
-
-            if len(row) > day_col_index:
-                fio = ""
-                for idx in [1, 0, 2]:
-                    if len(row) > idx and str(row[idx]).strip():
-                        val = str(row[idx]).strip()
-                        if not val.isdigit() and val.lower() not in [
-                            "nan", "none", "ф.и.о.", "п.і.о.", "листопад", "грудень", "січень", 
-                            "жовтень", "вересень", "серпень", "липень", "червень", "травень", 
-                            "квітень", "березень", "лютий"
-                        ]:
-                            fio = val
-                            break
-
-                if not fio:
-                    continue
-
-                status = str(row[day_col_index]).strip()
-                is_working = status == "" or status.lower() in ["nan", "none"]
-
-                if is_working:
-                    if current_section == "drivers":
-                        auto = ""
-                        for a_idx in [2, 3, 4, 5]:
-                            if len(row) > a_idx:
-                                a_val = str(row[a_idx]).strip()
-                                if a_val and a_val.lower() not in ["nan", "none"] and not a_val.isdigit() and len(a_val) > 2:
-                                    auto = a_val
-                                    break
+        for row in data[start_row:]:
+            # Водители (левая часть)
+            if len(row) > driver_day_col:
+                fio_drv = str(row[1]).strip() if len(row) > 1 else ""
+                if fio_drv and fio_drv.lower() not in ["nan", "none", "ф.и.о.", "п.і.о."]:
+                    status_drv = str(row[driver_day_col]).strip()
+                    if status_drv == "" or status_drv.lower() in ["nan", "none"]:
+                        auto_val = str(row[2]).strip() if len(row) > 2 else ""
                         drivers_list.append({
-                            "fio": fio,
-                            "auto": auto
+                            "fio": fio_drv,
+                            "auto": auto_val if auto_val.lower() not in ["nan", "none"] else ""
                         })
-                    elif current_section == "expeditors":
-                        expeditors_list.append({
-                            "fio": fio
-                        })
+
+            # Экспедиторы (правая часть)
+            if exped_day_col != -1:
+                name_col_idx = exped_day_col - 2
+                if name_col_idx >= 0 and len(row) > exped_day_col:
+                    fio_exp = str(row[name_col_idx]).strip() if len(row) > name_col_idx else ""
+                    if not fio_exp or fio_exp.isdigit() or fio_exp.lower() in ["nan", "none"]:
+                        if name_col_idx - 1 >= 0 and len(row) > name_col_idx - 1:
+                            val_alt = str(row[name_col_idx - 1]).strip()
+                            if val_alt and not val_alt.isdigit() and val_alt.lower() not in ["nan", "none"]:
+                                fio_exp = val_alt
+
+                    if fio_exp and fio_exp.lower() not in ["nan", "none", "ф.и.о.", "п.і.о.", "листопад"]:
+                        status_exp = str(row[exped_day_col]).strip()
+                        if status_exp == "" or status_exp.lower() in ["nan", "none"]:
+                            if not any(e["fio"] == fio_exp for e in expeditors_list):
+                                expeditors_list.append({
+                                    "fio": fio_exp
+                                })
 
         return {
             "status": "success",
