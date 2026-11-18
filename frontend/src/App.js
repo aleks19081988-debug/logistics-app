@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-const API_URL = ""; 
+const API_URL = "https://logistics-backend-3vj1.onrender.com"; 
 
 function App() {
   const [routes, setRoutes] = useState({});
