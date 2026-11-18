@@ -8,7 +8,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [authRole, setAuthRole] = useState(localStorage.getItem('vegtam_role') || null);
   
-  // Модальные окна
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [docDetails, setDocDetails] = useState([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -22,7 +21,6 @@ function App() {
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
 
-  // Статистика доставок
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [statsData, setStatsData] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -130,7 +128,6 @@ function App() {
   return (
     <div className="App" style={{ fontFamily: 'sans-serif', backgroundColor: '#f4f6f8', minHeight: '100vh', paddingBottom: '40px' }}>
       
-      {/* Шапка приложения */}
       <header style={{ backgroundColor: '#1e293b', color: '#fff', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
         <h2 style={{ margin: 0, fontSize: '20px' }}>🚚 VEGTAM LOGISTICS</h2>
         
@@ -176,7 +173,6 @@ function App() {
         </div>
       </header>
 
-      {/* Основной контент */}
       <main style={{ maxWidth: '1200px', margin: '20px auto', padding: '0 15px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3 style={{ margin: 0, color: '#334155' }}>Маршрути за автомобілями</h3>
@@ -224,7 +220,6 @@ function App() {
         )}
       </main>
 
-      {/* Модальное окно: Детали документа */}
       {selectedDoc && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' }}>
           <div style={{ backgroundColor: '#fff', borderRadius: '10px', width: '100%', maxWidth: '600px', maxHeight: '85vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
@@ -267,7 +262,6 @@ function App() {
         </div>
       )}
 
-      {/* Модальное окно: График работы */}
       {isScheduleOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' }}>
           <div style={{ backgroundColor: '#fff', borderRadius: '10px', width: '100%', maxWidth: '550px', maxHeight: '85vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
@@ -320,7 +314,6 @@ function App() {
         </div>
       )}
 
-      {/* Модальное окно: Контакты ТТ */}
       {isContactsOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' }}>
           <div style={{ backgroundColor: '#fff', borderRadius: '10px', width: '100%', maxWidth: '700px', maxHeight: '85vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
@@ -361,7 +354,6 @@ function App() {
         </div>
       )}
 
-      {/* Модальное окно: Статистика доставок */}
       {isStatsOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' }}>
           <div style={{ backgroundColor: '#fff', borderRadius: '10px', width: '100%', maxWidth: '650px', maxHeight: '85vh', overflowY: 'auto', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
