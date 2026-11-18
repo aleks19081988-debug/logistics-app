@@ -228,7 +228,7 @@ def get_tt_contacts():
 
 @app.get("/api/month-schedule")
 def get_month_schedule():
-    """Считывает месячный график (gid=981949435), разделяя на Водителей и Экспедиторов"""
+    """Считывает месячный график (gid=981949435) и определяет работающих на завтра"""
     try:
         data = get_sheet_data(gid=MONTH_SCHEDULE_GID)
         if not data or len(data) < 4:
@@ -244,7 +244,6 @@ def get_month_schedule():
                 val_clean = str(cell).strip()
                 if val_clean.endswith(".0"):
                     val_clean = val_clean[:-2]
-                
                 if val_clean == target_day_str:
                     day_col_index = c_idx
                     break
@@ -262,22 +261,28 @@ def get_month_schedule():
 
         drivers_list = []
         expeditors_list = []
-        current_section = None
+        current_section = "drivers"
 
         for row in data:
-            row_text = " ".join([str(c).lower() for c in row])
+            row_str = " ".join([str(c).lower() for c in row])
             
-            if "водії" in row_text:
-                current_section = "drivers"
+            if "експедитори" in row_str or "экспедиторы" in row_str:
+                current_section = "expeditors"
                 continue
-            elif "експедитори" in row_text:
-                current_section = "експедитори"
+            elif "водії" in row_str or "водители" in row_str:
+                current_section = "drivers"
                 continue
 
             if len(row) > day_col_index:
-                fio = str(row[1]).strip() if len(row) > 1 else ""
-                
-                if not fio or fio.lower() in ["nan", "none", "ф.и.о.", "п.і.о."]:
+                fio = ""
+                for idx in [1, 0, 2]:
+                    if len(row) > idx and str(row[idx]).strip():
+                        val = str(row[idx]).strip()
+                        if not val.isdigit() and val.lower() not in ["nan", "none", "ф.и.о.", "п.і.о.", "листопад", "грудень", "січень"]:
+                            fio = val
+                            break
+
+                if not fio:
                     continue
 
                 status = str(row[day_col_index]).strip()
@@ -285,12 +290,18 @@ def get_month_schedule():
 
                 if is_working:
                     if current_section == "drivers":
-                        auto = str(row[2]).strip() if len(row) > 2 else ""
+                        auto = ""
+                        for a_idx in [2, 3, 4]:
+                            if len(row) > a_idx:
+                                a_val = str(row[a_idx]).strip()
+                                if a_val and a_val.lower() not in ["nan", "none"] and not a_val.isdigit():
+                                    auto = a_val
+                                    break
                         drivers_list.append({
                             "fio": fio,
-                            "auto": auto if auto and auto.lower() not in ["nan", "none"] else ""
+                            "auto": auto
                         })
-                    elif current_section == "експедитори":
+                    elif current_section == "expeditors":
                         expeditors_list.append({
                             "fio": fio
                         })
